@@ -1,6 +1,6 @@
-# OpenAI ChatKit for WordPress
+# MCL Version of OpenAI ChatKit for WordPress
 
-**Contributors:** francescogruner  
+**Contributors:** francescogruner - original author, fatoracle (for this fork)  
 **Tags:** openai, chatkit, chatbot, ai, assistant, widget, chat, conversational-ai  
 **Requires at least:** 5.8  
 **Tested up to:** 6.5  
