@@ -6,12 +6,100 @@
   let retryCount = 0;
   const MAX_RETRIES = 3;
 
+  // Session preloading state
+  let preloadedSecret = null;
+  let preloadPromise = null;
+  let sessionPreloaded = false;
+
   // Helper to convert WordPress boolean strings to actual booleans
   function toBool(value) {
     if (typeof value === 'boolean') return value;
     if (typeof value === 'string') return value === '1' || value.toLowerCase() === 'true';
     if (typeof value === 'number') return value === 1;
     return !!value;
+  }
+
+  /**
+   * Gather client-side context to pass to the session
+   * This helps the workflow have more information about the user's environment
+   */
+  function getClientContext() {
+    const context = {};
+    
+    try {
+      // Page title for context
+      context.page_title = document.title || '';
+      
+      // Viewport size (helps with responsive considerations)
+      context.viewport_width = window.innerWidth.toString();
+      
+      // User's timezone
+      context.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      
+      // Browser language preference
+      context.language = navigator.language || '';
+    } catch (e) {
+      console.warn('Error gathering client context:', e);
+    }
+    
+    return context;
+  }
+
+  /**
+   * Preload session in background for faster first interaction
+   * Called after page load to have session ready when user opens chat
+   */
+  async function preloadSession() {
+    if (!toBool(config.preloadSession) || preloadPromise || !config.restUrl) {
+      return null;
+    }
+
+    console.log('🔄 Preloading ChatKit session...');
+    
+    preloadPromise = (async () => {
+      try {
+        const body = {};
+        
+        // Add client context if page context is enabled
+        if (toBool(config.passPageContext)) {
+          body.context = getClientContext();
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        const response = await fetch(config.restUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+          credentials: 'same-origin'
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.client_secret) {
+          preloadedSecret = data.client_secret;
+          sessionPreloaded = true;
+          console.log('✅ Session preloaded successfully');
+          return preloadedSecret;
+        }
+        
+        throw new Error('No client_secret in response');
+      } catch (error) {
+        console.warn('⚠️ Session preload failed (will retry on open):', error.message);
+        preloadPromise = null;
+        return null;
+      }
+    })();
+
+    return preloadPromise;
   }
 
   function loadChatkitScript() {
@@ -36,16 +124,42 @@
         throw new Error('Missing configuration');
       }
 
-      const headers = {
-        'Content-Type': 'application/json'
-      };
+      // Use preloaded secret if available (performance optimization)
+      if (preloadedSecret) {
+        const secret = preloadedSecret;
+        preloadedSecret = null; // Clear for next session
+        console.log('⚡ Using preloaded session (faster!)');
+        return secret;
+      }
+
+      // Wait for preload if in progress
+      if (preloadPromise) {
+        console.log('⏳ Waiting for preloading session...');
+        const secret = await preloadPromise;
+        if (secret) {
+          preloadedSecret = null;
+          preloadPromise = null;
+          return secret;
+        }
+      }
+
+      // Fall back to fetching a new session
+      console.log('🔄 Fetching new session...');
+      
+      const body = {};
+      
+      // Add client context if page context is enabled
+      if (toBool(config.passPageContext)) {
+        body.context = getClientContext();
+      }
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const response = await fetch(config.restUrl, {
         method: 'POST',
-        headers: headers,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
         signal: controller.signal,
         credentials: 'same-origin'
       });
@@ -258,7 +372,11 @@
         headerTitleText: config.headerTitleText,
         historyEnabled: config.historyEnabled,
         enableAttachments: config.enableAttachments,
-        disclaimerText: config.disclaimerText ? 'Set' : 'Not set'
+        disclaimerText: config.disclaimerText ? 'Set' : 'Not set',
+        // Performance optimization settings
+        preloadSession: config.preloadSession,
+        passPageContext: config.passPageContext,
+        sessionPreloaded: sessionPreloaded
       });
 
       // ✅ BUILD BASE OPTIONS with SAFE values
@@ -441,6 +559,21 @@
     document.addEventListener('DOMContentLoaded', initChatKit);
   } else {
     setTimeout(initChatKit, 0);
+  }
+
+  // Preload session in background after page fully loads (performance optimization)
+  // This makes the first chat interaction faster by having the session ready
+  function startPreload() {
+    if (toBool(config.preloadSession)) {
+      // Delay preload slightly to not compete with critical page resources
+      setTimeout(preloadSession, 2000);
+    }
+  }
+
+  if (document.readyState === 'complete') {
+    startPreload();
+  } else {
+    window.addEventListener('load', startPreload);
   }
 
   window.addEventListener('beforeunload', () => {

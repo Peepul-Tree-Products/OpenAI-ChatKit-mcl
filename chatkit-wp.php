@@ -134,6 +134,12 @@ class ChatKit_WordPress {
             'chatkit_disclaimer_text' => ['type' => 'string', 'default' => ''],
             'chatkit_disclaimer_high_contrast' => ['type' => 'boolean', 'default' => false],
             'chatkit_initial_thread_id' => ['type' => 'string', 'default' => ''],
+            
+            // Workflow optimization settings
+            'chatkit_default_location' => ['type' => 'string', 'default' => ''],
+            'chatkit_pass_page_context' => ['type' => 'boolean', 'default' => true],
+            'chatkit_pass_user_info' => ['type' => 'boolean', 'default' => false],
+            'chatkit_preload_session' => ['type' => 'boolean', 'default' => true],
         ];
 
         foreach ($settings as $option => $args) {
@@ -212,6 +218,12 @@ class ChatKit_WordPress {
                 'disclaimer_text' => get_option('chatkit_disclaimer_text', ''),
                 'disclaimer_high_contrast' => get_option('chatkit_disclaimer_high_contrast', false),
                 'initial_thread_id' => get_option('chatkit_initial_thread_id', ''),
+                
+                // Workflow optimization options
+                'default_location' => get_option('chatkit_default_location', ''),
+                'pass_page_context' => get_option('chatkit_pass_page_context', true),
+                'pass_user_info' => get_option('chatkit_pass_user_info', false),
+                'preload_session' => get_option('chatkit_preload_session', true),
             ];
         }
         return $this->options_cache;
@@ -330,7 +342,8 @@ class ChatKit_WordPress {
                 'chatkit_default_prompt_4_icon',
                 'chatkit_default_prompt_5',
                 'chatkit_default_prompt_5_text',
-                'chatkit_default_prompt_5_icon'
+                'chatkit_default_prompt_5_icon',
+                'chatkit_default_location'
             ];
 
             foreach ($text_fields as $field) {
@@ -361,7 +374,10 @@ class ChatKit_WordPress {
                 'chatkit_enable_custom_font',
                 'chatkit_show_header',
                 'chatkit_show_history',
-                'chatkit_disclaimer_high_contrast'
+                'chatkit_disclaimer_high_contrast',
+                'chatkit_pass_page_context',
+                'chatkit_pass_user_info',
+                'chatkit_preload_session'
             ];
 
             foreach ($boolean_fields as $field) {
@@ -464,6 +480,13 @@ class ChatKit_WordPress {
             'workflow' => ['id' => $workflow_id],
             'user' => $user_id
         ];
+
+        // Build initial context for workflow variables (performance optimization)
+        $initial_context = $this->build_initial_context($request);
+        if (!empty($initial_context)) {
+            $session_body['context'] = $initial_context;
+            error_log('ChatKit: Session context added - ' . wp_json_encode(array_keys($initial_context)));
+        }
 
         // Add file upload configuration if enabled
         $enable_attachments = get_option('chatkit_enable_attachments', false);
@@ -599,6 +622,9 @@ class ChatKit_WordPress {
             CHATKIT_WP_VERSION
         );
 
+        // Add preconnect hints for faster CDN loading
+        add_action('wp_head', [$this, 'add_preconnect_hints'], 1);
+
         $options = $this->get_all_options();
         
         $prompts_config = [];
@@ -646,6 +672,9 @@ class ChatKit_WordPress {
             'disclaimerText' => $options['disclaimer_text'],
             'disclaimerHighContrast' => $options['disclaimer_high_contrast'] ? true : false,
             'initialThreadId' => $options['initial_thread_id'],
+            // Performance optimization options
+            'preloadSession' => $options['preload_session'] ? true : false,
+            'passPageContext' => $options['pass_page_context'] ? true : false,
             'i18n' => [
                 'unableToStart' => __('Unable to start chat. Please try again later.', 'chatkit-wp'),
                 'configError' => __('Chat configuration error. Please contact support.', 'chatkit-wp'),
@@ -736,6 +765,94 @@ class ChatKit_WordPress {
         } else {
             setcookie($name, $value, $expire, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
         }
+    }
+
+    /**
+     * Add preconnect hints for faster CDN and API loading
+     */
+    public function add_preconnect_hints() {
+        echo '<link rel="preconnect" href="https://cdn.platform.openai.com" crossorigin>' . "\n";
+        echo '<link rel="dns-prefetch" href="https://cdn.platform.openai.com">' . "\n";
+        echo '<link rel="preconnect" href="https://api.openai.com" crossorigin>' . "\n";
+        echo '<link rel="dns-prefetch" href="https://api.openai.com">' . "\n";
+    }
+
+    /**
+     * Build initial context for workflow variables
+     * This provides the workflow with pre-populated data to reduce prompts
+     * 
+     * @param \WP_REST_Request $request The incoming request
+     * @return array Context data to pass to the workflow
+     */
+    private function build_initial_context(\WP_REST_Request $request) {
+        $context = [];
+        
+        // Get request body for any client-side context
+        $body = $request->get_json_params();
+        
+        // Add default location if configured (helps skip location prompts)
+        $default_location = get_option('chatkit_default_location', '');
+        if (!empty($default_location)) {
+            $context['default_location'] = sanitize_text_field($default_location);
+        }
+        
+        // Pass WordPress locale as hint for user's region
+        $wp_locale = get_locale();
+        if (!empty($wp_locale)) {
+            $context['wp_locale'] = $wp_locale;
+            // Extract country code from locale (e.g., 'en_US' -> 'US')
+            $parts = explode('_', $wp_locale);
+            if (count($parts) >= 2) {
+                $context['locale_country'] = strtoupper($parts[1]);
+            }
+        }
+        
+        // Pass page context if enabled (helps workflow understand user's context)
+        if (get_option('chatkit_pass_page_context', true)) {
+            // Get referer URL (the page where chat was opened)
+            $referer = isset($_SERVER['HTTP_REFERER']) ? sanitize_url($_SERVER['HTTP_REFERER']) : '';
+            if (!empty($referer)) {
+                $context['page_url'] = $referer;
+                
+                // Extract page path for context
+                $parsed = parse_url($referer);
+                if (!empty($parsed['path'])) {
+                    $context['page_path'] = $parsed['path'];
+                }
+            }
+            
+            // Add site info
+            $context['site_name'] = get_bloginfo('name');
+            $context['site_url'] = home_url();
+        }
+        
+        // Pass logged-in user info if enabled (optional, for personalization)
+        if (get_option('chatkit_pass_user_info', false) && is_user_logged_in()) {
+            $current_user = wp_get_current_user();
+            $context['user_name'] = $current_user->display_name;
+            $context['user_logged_in'] = true;
+            
+            // Optionally include user roles for workflow logic
+            if (!empty($current_user->roles)) {
+                $context['user_role'] = $current_user->roles[0];
+            }
+        }
+        
+        // Merge any context passed from the client (JavaScript)
+        if (!empty($body['context']) && is_array($body['context'])) {
+            // Only allow safe keys from client
+            $allowed_client_keys = ['page_title', 'viewport_width', 'timezone', 'language'];
+            foreach ($allowed_client_keys as $key) {
+                if (isset($body['context'][$key])) {
+                    $context[$key] = sanitize_text_field($body['context'][$key]);
+                }
+            }
+        }
+        
+        // Add timestamp for freshness
+        $context['session_timestamp'] = current_time('c');
+        
+        return $context;
     }
 }
 

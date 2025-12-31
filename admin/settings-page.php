@@ -459,6 +459,61 @@
                         </p>
                     </td>
                 </tr>
+                
+                <tr>
+                    <td colspan="2"><hr><h3>⚡ <?php esc_html_e('Performance & Workflow Optimization', 'chatkit-wp'); ?></h3></td>
+                </tr>
+                
+                <tr>
+                    <th scope="row"><?php esc_html_e('Session Preloading', 'chatkit-wp'); ?></th>
+                    <td>
+                        <label style="display:block; margin-bottom:8px;">
+                            <input type="checkbox" name="chatkit_preload_session"
+                                   <?php checked($preload_session ?? true, true); ?>>
+                            <strong><?php esc_html_e('Preload session in background', 'chatkit-wp'); ?></strong>
+                        </label>
+                        <p class="description">
+                            <?php esc_html_e('Creates a session after page loads so chat opens instantly. Recommended for better user experience.', 'chatkit-wp'); ?>
+                        </p>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <th scope="row"><?php esc_html_e('Workflow Context', 'chatkit-wp'); ?></th>
+                    <td>
+                        <div style="background:#d1ecf1; border-left:3px solid #0c5460; padding:10px; margin-bottom:15px;">
+                            <strong>ℹ️ <?php esc_html_e('Context helps your workflow make smarter decisions', 'chatkit-wp'); ?></strong><br>
+                            <?php esc_html_e('Pass information to your Agent Builder workflow to reduce prompts and improve answers.', 'chatkit-wp'); ?>
+                        </div>
+                        
+                        <label style="display:block; margin-bottom:8px;">
+                            <input type="checkbox" name="chatkit_pass_page_context"
+                                   <?php checked($pass_page_context ?? true, true); ?>>
+                            <?php esc_html_e('Pass page context (URL, title, site name)', 'chatkit-wp'); ?>
+                        </label>
+                        <label style="display:block; margin-bottom:8px;">
+                            <input type="checkbox" name="chatkit_pass_user_info"
+                                   <?php checked($pass_user_info ?? false, true); ?>>
+                            <?php esc_html_e('Pass logged-in user info (name, role)', 'chatkit-wp'); ?>
+                        </label>
+                        <p class="description">
+                            <?php esc_html_e('Context is available in your workflow as context.page_url, context.user_name, etc.', 'chatkit-wp'); ?>
+                        </p>
+                    </td>
+                </tr>
+                
+                <tr>
+                    <th scope="row"><label for="chatkit_default_location"><?php esc_html_e('Default Location', 'chatkit-wp'); ?></label></th>
+                    <td>
+                        <input type="text" id="chatkit_default_location" name="chatkit_default_location"
+                               value="<?php echo esc_attr($default_location ?? ''); ?>"
+                               class="regular-text" placeholder="<?php esc_attr_e('e.g., New York, NY or California', 'chatkit-wp'); ?>">
+                        <p class="description">
+                            <?php esc_html_e('If your workflow needs location, set a default here to skip the location prompt.', 'chatkit-wp'); ?><br>
+                            <?php esc_html_e('Available in workflow as context.default_location', 'chatkit-wp'); ?>
+                        </p>
+                    </td>
+                </tr>
             </table>
         </div>
 
