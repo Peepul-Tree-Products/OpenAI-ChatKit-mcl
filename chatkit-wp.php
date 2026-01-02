@@ -19,6 +19,11 @@ define('CHATKIT_WP_VERSION', '1.0.3');
 define('CHATKIT_WP_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CHATKIT_WP_PLUGIN_URL', plugin_dir_url(__FILE__));
 
+// Load AI Backend (v2)
+if (file_exists(__DIR__ . '/ai-backend/bootstrap.php')) {
+    require_once __DIR__ . '/ai-backend/bootstrap.php';
+}
+
 class ChatKit_WordPress {
     private static $instance = null;
     private $options_cache = null;
@@ -71,6 +76,7 @@ class ChatKit_WordPress {
 
     public function register_settings() {
         $settings = [
+            'chatkit_use_ai_backend' => ['type' => 'boolean', 'default' => false],
             'chatkit_api_key' => ['type' => 'string', 'default' => ''],
             'chatkit_workflow_id' => ['type' => 'string', 'default' => ''],
             'chatkit_accent_color' => ['type' => 'string', 'default' => '#FF4500'],
