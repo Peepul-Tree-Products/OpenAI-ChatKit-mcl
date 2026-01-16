@@ -6,6 +6,400 @@
   let retryCount = 0;
   const MAX_RETRIES = 3;
 
+  // Size presets
+  const SIZE_PRESETS = {
+    small: { width: 360, height: 500 },
+    medium: { width: 400, height: 600 },
+    large: { width: 600, height: 800 }
+  };
+
+  // ChatWindowManager class - centralized state and control management
+  class ChatWindowManager {
+    constructor(config) {
+      this.config = config;
+      this.state = {
+        isOpen: false,
+        size: 'medium', // 'small', 'medium', 'large', 'maximized', 'custom'
+        previousSize: null, // Store size before maximize
+        width: 400,
+        height: 600
+      };
+      this.elements = {
+        chatkit: null,
+        button: null,
+        controls: null,
+        overlay: null
+      };
+      this.observers = [];
+      this.init();
+    }
+    
+    init() {
+      this.elements.chatkit = document.getElementById('myChatkit');
+      this.elements.button = document.getElementById('chatToggleBtn');
+      if (!this.elements.chatkit || !this.elements.button) {
+        console.warn('ChatKit elements not found');
+        return;
+      }
+      this.loadSavedPreferences();
+      this.createControls();
+    }
+    
+    loadSavedPreferences() {
+      try {
+        const saved = localStorage.getItem('chatkit_window_size');
+        if (saved) {
+          const data = JSON.parse(saved);
+          this.state.size = data.size || 'medium';
+          this.state.width = data.width || SIZE_PRESETS.medium.width;
+          this.state.height = data.height || SIZE_PRESETS.medium.height;
+        }
+      } catch (e) {
+        console.warn('Failed to load size preference:', e);
+      }
+    }
+    
+    savePreferences() {
+      try {
+        localStorage.setItem('chatkit_window_size', JSON.stringify({
+          size: this.state.size,
+          width: this.state.width,
+          height: this.state.height,
+          timestamp: Date.now()
+        }));
+      } catch (e) {
+        console.warn('Failed to save size preference:', e);
+      }
+    }
+    
+    setSize(size, width, height) {
+      if (!this.elements.chatkit) return;
+      
+      const chatkit = this.elements.chatkit;
+      
+      // Remove all size classes
+      chatkit.classList.remove('chatkit-small', 'chatkit-medium', 'chatkit-large', 'chatkit-maximized');
+      
+      if (size === 'maximized') {
+        chatkit.classList.add('chatkit-maximized');
+        this.state.size = 'maximized';
+      } else {
+        if (size === 'small' || size === 'medium' || size === 'large') {
+          chatkit.classList.add(`chatkit-${size}`);
+          chatkit.style.width = '';
+          chatkit.style.height = '';
+          this.state.size = size;
+          this.state.width = width;
+          this.state.height = height;
+        } else {
+          // Custom size
+          chatkit.style.width = width + 'px';
+          chatkit.style.height = height + 'px';
+          this.state.size = 'custom';
+          this.state.width = width;
+          this.state.height = height;
+        }
+      }
+      
+      // Ensure window stays within viewport
+      this.constrainToViewport();
+      
+      // Update control position
+      this.updateControlPosition();
+      
+      // Save preferences
+      this.savePreferences();
+      
+      // Update button states
+      this.updateResizeButtons();
+    }
+    
+    constrainToViewport() {
+      if (this.state.size === 'maximized' || !this.elements.chatkit) {
+        return;
+      }
+      
+      const rect = this.elements.chatkit.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      // Check if window is outside viewport
+      if (rect.right > viewportWidth) {
+        this.elements.chatkit.style.right = '16px';
+        this.elements.chatkit.style.left = '';
+      }
+      if (rect.bottom > viewportHeight) {
+        this.elements.chatkit.style.bottom = '16px';
+        this.elements.chatkit.style.top = '';
+      }
+      if (rect.left < 0) {
+        this.elements.chatkit.style.left = '16px';
+        this.elements.chatkit.style.right = '';
+      }
+      if (rect.top < 0) {
+        this.elements.chatkit.style.top = '16px';
+        this.elements.chatkit.style.bottom = '';
+      }
+    }
+    
+    createControls() {
+      // Try to inject into header first, fallback to overlay
+      this.setupResizeControls(this.elements.chatkit);
+    }
+    
+    setupResizeControls(chatkitElement) {
+      // Always create overlay controls for now (simpler, more reliable)
+      this.createOverlayResizeControls(chatkitElement);
+    }
+    
+    createOverlayResizeControls(chatkitElement) {
+      // Check if overlay already exists
+      let overlay = document.querySelector('.chatkit-resize-controls-overlay');
+      if (overlay) {
+        this.elements.overlay = overlay;
+        this.elements.controls = overlay.querySelector('.chatkit-resize-controls');
+        this.updateControlPosition();
+        this.updateResizeButtons();
+        return;
+      }
+      
+      // Create overlay container
+      overlay = document.createElement('div');
+      overlay.className = 'chatkit-resize-controls-overlay';
+      
+      // Create resize controls container
+      const controls = document.createElement('div');
+      controls.className = 'chatkit-resize-controls';
+      controls.setAttribute('role', 'toolbar');
+      controls.setAttribute('aria-label', 'Window size controls');
+      
+      // Create size buttons with icons
+      const sizes = [
+        { key: 'small', label: 'Small window', icon: '◻' },
+        { key: 'medium', label: 'Medium window', icon: '▢' },
+        { key: 'large', label: 'Large window', icon: '⬜' },
+        { key: 'maximize', label: 'Maximize window', icon: '⛶' }
+      ];
+      
+      sizes.forEach(size => {
+        const btn = document.createElement('button');
+        btn.className = 'chatkit-resize-btn';
+        btn.setAttribute('data-size', size.key);
+        btn.setAttribute('aria-label', size.label);
+        btn.setAttribute('title', size.label);
+        btn.setAttribute('type', 'button');
+        btn.innerHTML = `<span class="chatkit-icon">${size.icon}</span>`;
+        
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.handlePresetSize(size.key);
+        });
+        
+        controls.appendChild(btn);
+      });
+      
+      overlay.appendChild(controls);
+      document.body.appendChild(overlay);
+      
+      this.elements.overlay = overlay;
+      this.elements.controls = controls;
+      
+      // Setup position updates
+      this.setupPositionUpdates();
+      
+      // Initial positioning
+      this.updateControlPosition();
+      
+      // Update button states
+      this.updateResizeButtons();
+    }
+    
+    setupPositionUpdates() {
+      const chatkit = this.elements.chatkit;
+      if (!chatkit) return;
+      
+      // Update position when chatkit moves or state changes
+      const overlayObserver = new MutationObserver(() => {
+        this.updateControlPosition();
+      });
+      overlayObserver.observe(chatkit, { attributes: true, attributeFilter: ['style'] });
+      
+      // Update on window resize
+      const resizeHandler = () => {
+        this.updateControlPosition();
+      };
+      window.addEventListener('resize', resizeHandler);
+      
+      // Store for cleanup
+      this.observers.push({ observer: overlayObserver, handler: resizeHandler });
+      chatkit._overlayObserver = overlayObserver;
+      chatkit._overlayResizeHandler = resizeHandler;
+      chatkit._overlayUpdatePosition = () => this.updateControlPosition();
+    }
+    
+    updateControlPosition() {
+      const overlay = this.elements.overlay;
+      const chatkit = this.elements.chatkit;
+      
+      if (!overlay || !chatkit) return;
+      
+      // Hide controls when chat is closed
+      if (!this.state.isOpen || chatkit.style.display === 'none') {
+        overlay.style.display = 'none';
+        return;
+      }
+      
+      // Show controls when open
+      overlay.style.display = 'block';
+      
+      const rect = chatkit.getBoundingClientRect();
+      const isMaximized = this.state.size === 'maximized';
+      
+      if (isMaximized) {
+        // Maximized: Position at top-right of viewport with padding
+        overlay.style.cssText = `
+          position: fixed;
+          top: 16px;
+          right: 16px;
+          z-index: 10002;
+          pointer-events: none;
+        `;
+      } else {
+        // Regular size: Position at top-right of chat window
+        overlay.style.cssText = `
+          position: fixed;
+          top: ${rect.top + 8}px;
+          right: ${window.innerWidth - rect.right + 8}px;
+          z-index: 10002;
+          pointer-events: none;
+        `;
+      }
+      
+      if (this.elements.controls) {
+        this.elements.controls.style.cssText = 'pointer-events: auto;';
+      }
+    }
+    
+    handlePresetSize(size) {
+      if (!this.elements.chatkit || !this.state.isOpen) return;
+      
+      if (size === 'maximize') {
+        this.toggleMaximize();
+      } else {
+        const preset = SIZE_PRESETS[size];
+        if (preset) {
+          // Store previous size if not already stored
+          if (this.state.size !== 'maximized' && !this.state.previousSize) {
+            const rect = this.elements.chatkit.getBoundingClientRect();
+            this.state.previousSize = {
+              size: this.state.size,
+              width: rect.width,
+              height: rect.height
+            };
+          }
+          
+          this.setSize(size, preset.width, preset.height);
+        }
+      }
+    }
+    
+    toggleMaximize() {
+      if (!this.elements.chatkit || !this.state.isOpen) return;
+      
+      if (this.state.size === 'maximized') {
+        // Restore to previous size
+        if (this.state.previousSize) {
+          const prev = this.state.previousSize;
+          this.setSize(prev.size, prev.width, prev.height);
+          this.state.previousSize = null;
+        } else {
+          // Default to medium if no previous size
+          const preset = SIZE_PRESETS.medium;
+          this.setSize('medium', preset.width, preset.height);
+        }
+      } else {
+        // Maximize
+        const rect = this.elements.chatkit.getBoundingClientRect();
+        this.state.previousSize = {
+          size: this.state.size,
+          width: rect.width,
+          height: rect.height
+        };
+        this.setSize('maximized', window.innerWidth, window.innerHeight);
+      }
+    }
+    
+    updateResizeButtons() {
+      if (!this.elements.controls) return;
+      
+      const buttons = this.elements.controls.querySelectorAll('.chatkit-resize-btn');
+      buttons.forEach(btn => {
+        const size = btn.getAttribute('data-size');
+        const isActive = (size === 'maximize' && this.state.size === 'maximized') ||
+                        (size === this.state.size && this.state.size !== 'maximized');
+        
+        btn.classList.toggle('active', isActive);
+        
+        // Update maximize/restore button icon
+        if (size === 'maximize') {
+          const icon = btn.querySelector('.chatkit-icon');
+          if (icon) {
+            if (this.state.size === 'maximized') {
+              icon.textContent = '⛷';
+              btn.setAttribute('aria-label', 'Restore window size');
+            } else {
+              icon.textContent = '⛶';
+              btn.setAttribute('aria-label', 'Maximize window');
+            }
+          }
+        }
+      });
+    }
+    
+    open() {
+      this.state.isOpen = true;
+      if (this.elements.chatkit) {
+        this.elements.chatkit.style.display = 'block';
+        this.elements.chatkit.setAttribute('aria-modal', 'true');
+      }
+      if (this.elements.button) {
+        this.elements.button.setAttribute('aria-expanded', 'true');
+      }
+      this.updateControlPosition();
+    }
+    
+    close() {
+      this.state.isOpen = false;
+      if (this.elements.chatkit) {
+        this.elements.chatkit.style.display = 'none';
+        this.elements.chatkit.setAttribute('aria-modal', 'false');
+      }
+      if (this.elements.button) {
+        this.elements.button.setAttribute('aria-expanded', 'false');
+      }
+      this.updateControlPosition();
+    }
+    
+    cleanup() {
+      // Remove observers
+      this.observers.forEach(({ observer, handler }) => {
+        if (observer) observer.disconnect();
+        if (handler) window.removeEventListener('resize', handler);
+      });
+      this.observers = [];
+      
+      // Remove overlay
+      if (this.elements.overlay && this.elements.overlay.parentNode) {
+        this.elements.overlay.remove();
+      }
+    }
+  }
+
+  // Global instance
+  let chatWindowManager = null;
+  
+
   // Helper to convert WordPress boolean strings to actual booleans
   function toBool(value) {
     if (typeof value === 'boolean') return value;
@@ -133,6 +527,74 @@
     }
   }
 
+  // Legacy functions for backward compatibility (delegate to ChatWindowManager)
+  function loadSizePreference() {
+    if (chatWindowManager) {
+      return {
+        size: chatWindowManager.state.size,
+        width: chatWindowManager.state.width,
+        height: chatWindowManager.state.height
+      };
+    }
+    return {
+      size: 'medium',
+      width: SIZE_PRESETS.medium.width,
+      height: SIZE_PRESETS.medium.height
+    };
+  }
+  
+  function saveSizePreference(size, width, height) {
+    if (chatWindowManager) {
+      chatWindowManager.setSize(size, width, height);
+    }
+  }
+  
+  function applySize(chatkit, size, width, height) {
+    if (chatWindowManager) {
+      chatWindowManager.setSize(size, width, height);
+    }
+  }
+  
+  function constrainToViewport(chatkit) {
+    if (chatWindowManager) {
+      chatWindowManager.constrainToViewport();
+    }
+  }
+  
+  // Handle window resize (debounced to prevent infinite loops)
+  let resizeTimeout = null;
+  window.addEventListener('resize', () => {
+    if (resizeTimeout) clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      const chatkit = document.getElementById('myChatkit');
+      if (chatkit && isOpen) {
+        const isMobile = window.innerWidth <= 768;
+        
+        if (isMobile) {
+          // On mobile, hide controls
+          if (chatWindowManager && chatWindowManager.elements.overlay) {
+            chatWindowManager.elements.overlay.style.display = 'none';
+          }
+          
+          // Reset to mobile layout
+          if (chatWindowManager && chatWindowManager.state.size === 'maximized') {
+            chatkit.classList.remove('chatkit-maximized');
+            chatWindowManager.state.size = 'medium';
+          }
+          chatkit.style.width = '';
+          chatkit.style.height = '';
+        } else {
+          // On desktop, show controls
+          if (chatWindowManager) {
+            chatWindowManager.updateControlPosition();
+          }
+          
+          constrainToViewport(chatkit);
+        }
+      }
+    }, 100);
+  });
+
   function setupToggle() {
     const button = document.getElementById('chatToggleBtn');
     const chatkit = document.getElementById('myChatkit');
@@ -142,28 +604,57 @@
       return;
     }
 
+    // Initialize ChatWindowManager
+    chatWindowManager = new ChatWindowManager(config);
+    
     const originalText = button.textContent || config.buttonText || 'Chat now';
     const closeText = config.closeText || '✕';
     const accentColor = config.accentColor || '#FF4500';
 
     button.addEventListener('click', () => {
       isOpen = !isOpen;
-      chatkit.style.display = isOpen ? 'block' : 'none';
-      button.setAttribute('aria-expanded', isOpen);
-      chatkit.setAttribute('aria-modal', isOpen);
       
       if (isOpen) {
+        chatWindowManager.open();
         button.classList.add('chatkit-open');
         button.textContent = closeText;
         button.style.backgroundColor = accentColor;
         chatkit.style.animation = 'chatkit-slide-up 0.3s ease-out';
         
-        setTimeout(() => chatkit.focus(), 100);
+        // Ensure chatkit has proper positioning
+        const computedPosition = window.getComputedStyle(chatkit).position;
+        if (computedPosition === 'static') {
+          chatkit.style.position = 'relative';
+        }
+        if (!chatkit.style.zIndex || parseInt(chatkit.style.zIndex) < 10000) {
+          chatkit.style.zIndex = '9998';
+        }
         
+        // On mobile, always use full screen
         if (window.innerWidth <= 768) {
           document.body.style.overflow = 'hidden';
+          // Force mobile layout
+          chatkit.classList.remove('chatkit-small', 'chatkit-medium', 'chatkit-large', 'chatkit-maximized');
+          chatkit.style.width = '';
+          chatkit.style.height = '';
+        } else {
+          // Restore saved size preference on desktop
+          const saved = chatWindowManager.state;
+          // Don't restore maximized on mobile-sized screens
+          if (saved.size === 'maximized' && window.innerWidth > 768) {
+            chatWindowManager.setSize(saved.size, saved.width, saved.height);
+          } else if (saved.size !== 'maximized') {
+            chatWindowManager.setSize(saved.size, saved.width, saved.height);
+          } else {
+            // Default to medium if saved was maximized but screen is small
+            const preset = SIZE_PRESETS.medium;
+            chatWindowManager.setSize('medium', preset.width, preset.height);
+          }
         }
+        
+        setTimeout(() => chatkit.focus(), 100);
       } else {
+        chatWindowManager.close();
         button.classList.remove('chatkit-open');
         button.textContent = originalText;
         button.style.backgroundColor = accentColor;
@@ -255,6 +746,334 @@
         setTimeout(() => errorDiv.remove(), 300);
       }
     }, 5000);
+  }
+  
+  // Update resize button active states (delegate to ChatWindowManager)
+  function updateResizeButtons() {
+    if (chatWindowManager) {
+      chatWindowManager.updateResizeButtons();
+    }
+  }
+  
+  // Setup resize control buttons (delegate to ChatWindowManager)
+  function setupResizeControls(chatkitElement) {
+    if (chatWindowManager) {
+      chatWindowManager.setupResizeControls(chatkitElement);
+    }
+  }
+  
+  // Legacy setupResizeControls function (kept for compatibility)
+  function setupResizeControlsLegacy(chatkitElement) {
+    // Always add controls on desktop, even if header is disabled (use overlay)
+    if (window.innerWidth <= 768) {
+      return;
+    }
+    
+    // If header is disabled, use overlay approach
+    if (!toBool(config.showHeader)) {
+      createOverlayResizeControls(chatkitElement);
+      return;
+    }
+    
+    // Check if controls already exist
+    if (document.querySelector('.chatkit-resize-controls')) {
+      updateResizeButtons();
+      return;
+    }
+    
+    // Try multiple approaches to find header
+    let header = null;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    const tryFindHeader = () => {
+      attempts++;
+      
+      // Try shadow DOM first
+      if (chatkitElement.shadowRoot) {
+        header = chatkitElement.shadowRoot.querySelector('header') ||
+                chatkitElement.shadowRoot.querySelector('[role="banner"]');
+      }
+      
+      // Try regular DOM
+      if (!header) {
+        header = chatkitElement.querySelector('header') ||
+                chatkitElement.querySelector('[role="banner"]');
+      }
+      
+      // Try finding by class or data attribute
+      if (!header) {
+        const allElements = chatkitElement.shadowRoot 
+          ? Array.from(chatkitElement.shadowRoot.querySelectorAll('*'))
+          : Array.from(chatkitElement.querySelectorAll('*'));
+        header = allElements.find(el => 
+          el.tagName === 'HEADER' || 
+          el.getAttribute('role') === 'banner' ||
+          el.classList.contains('header') ||
+          el.classList.contains('chatkit-header')
+        );
+      }
+      
+      if (header) {
+        injectResizeControls(header);
+      } else if (attempts < maxAttempts) {
+        setTimeout(tryFindHeader, 200);
+      } else {
+        // Fallback: create overlay controls if header not found
+        createOverlayResizeControls(chatkitElement);
+      }
+    };
+    
+    // Start trying after a short delay
+    setTimeout(tryFindHeader, 300);
+  }
+  
+  // Inject controls into header
+  function injectResizeControls(header) {
+    // Check if controls already exist
+    if (header.querySelector('.chatkit-resize-controls')) {
+      updateResizeButtons();
+      return;
+    }
+    
+    // Create resize controls container
+    const controls = document.createElement('div');
+    controls.className = 'chatkit-resize-controls';
+    controls.setAttribute('role', 'toolbar');
+    controls.setAttribute('aria-label', 'Window size controls');
+    
+    // Create size buttons with icons
+    const sizes = [
+      { key: 'small', label: 'Small window', icon: '◻' },
+      { key: 'medium', label: 'Medium window', icon: '▢' },
+      { key: 'large', label: 'Large window', icon: '⬜' },
+      { key: 'maximize', label: 'Maximize window', icon: '⛶' }
+    ];
+    
+    sizes.forEach(size => {
+      const btn = document.createElement('button');
+      btn.className = 'chatkit-resize-btn';
+      btn.setAttribute('data-size', size.key);
+      btn.setAttribute('aria-label', size.label);
+      btn.setAttribute('title', size.label);
+      btn.setAttribute('type', 'button');
+      btn.innerHTML = `<span class="chatkit-icon">${size.icon}</span>`;
+      
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handlePresetSize(size.key);
+      });
+      
+      controls.appendChild(btn);
+    });
+    
+    // Insert controls into header
+    // Try to find right action area or append to end
+    const rightAction = header.querySelector('[data-right-action]') || 
+                       header.querySelector('.right-action') ||
+                       header.querySelector('div:last-child');
+    
+    if (rightAction && rightAction.parentNode === header) {
+      header.insertBefore(controls, rightAction);
+    } else {
+      header.appendChild(controls);
+    }
+    
+    // Update button states
+    updateResizeButtons();
+  }
+  
+  // Fallback: Create overlay controls if header not accessible
+  function createOverlayResizeControls(chatkitElement) {
+    // Check if overlay already exists
+    const existing = document.querySelector('.chatkit-resize-controls-overlay');
+    if (existing) {
+      updateResizeButtons();
+      return;
+    }
+    
+    // Create overlay container - append to body with fixed positioning
+    const overlay = document.createElement('div');
+    overlay.className = 'chatkit-resize-controls-overlay';
+    
+    // Create resize controls container
+    const controls = document.createElement('div');
+    controls.className = 'chatkit-resize-controls';
+    controls.setAttribute('role', 'toolbar');
+    controls.setAttribute('aria-label', 'Window size controls');
+    
+    // Create size buttons with icons
+    const sizes = [
+      { key: 'small', label: 'Small window', icon: '◻' },
+      { key: 'medium', label: 'Medium window', icon: '▢' },
+      { key: 'large', label: 'Large window', icon: '⬜' },
+      { key: 'maximize', label: 'Maximize window', icon: '⛶' }
+    ];
+    
+    sizes.forEach(size => {
+      const btn = document.createElement('button');
+      btn.className = 'chatkit-resize-btn';
+      btn.setAttribute('data-size', size.key);
+      btn.setAttribute('aria-label', size.label);
+      btn.setAttribute('title', size.label);
+      btn.setAttribute('type', 'button');
+      btn.innerHTML = `<span class="chatkit-icon">${size.icon}</span>`;
+      
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handlePresetSize(size.key);
+      });
+      
+      controls.appendChild(btn);
+    });
+    
+    overlay.appendChild(controls);
+    document.body.appendChild(overlay);
+    
+    // Centralized position update function - handles all states
+    const updateOverlayPosition = () => {
+      const chatkit = document.getElementById('myChatkit');
+      
+      // Hide controls when chat is closed
+      if (!chatkit || !isOpen || chatkit.style.display === 'none') {
+        overlay.style.display = 'none';
+        return;
+      }
+      
+      // Show controls when open
+      overlay.style.display = 'block';
+      
+      const rect = chatkit.getBoundingClientRect();
+      const isMaximized = resizeState.currentSize === 'maximized';
+      
+      if (isMaximized) {
+        // Maximized: Position at top-right of viewport with padding
+        overlay.style.cssText = `
+          position: fixed;
+          top: 16px;
+          right: 16px;
+          z-index: 10002;
+          pointer-events: none;
+        `;
+      } else {
+        // Regular size: Position at top-right of chat window
+        overlay.style.cssText = `
+          position: fixed;
+          top: ${rect.top + 8}px;
+          right: ${window.innerWidth - rect.right + 8}px;
+          z-index: 10002;
+          pointer-events: none;
+        `;
+      }
+      
+      controls.style.cssText = 'pointer-events: auto;';
+    };
+    
+    // Initial positioning
+    updateOverlayPosition();
+    
+    // Update position when chatkit moves or state changes
+    const overlayObserver = new MutationObserver(() => {
+      updateOverlayPosition();
+    });
+    overlayObserver.observe(chatkitElement, { attributes: true, attributeFilter: ['style'] });
+    
+    // Update on window resize
+    const resizeHandler = () => {
+      updateOverlayPosition();
+    };
+    window.addEventListener('resize', resizeHandler);
+    
+    // Store for cleanup
+    chatkitElement._overlayObserver = overlayObserver;
+    chatkitElement._overlayResizeHandler = resizeHandler;
+    chatkitElement._overlayUpdatePosition = updateOverlayPosition;
+    
+    // Update button states
+    updateResizeButtons();
+  }
+  
+  
+  // Setup keyboard shortcuts
+  function setupKeyboardShortcuts(chatkitElement) {
+    document.addEventListener('keydown', (e) => {
+      if (!isOpen) return;
+      
+      // Escape key - minimize/close (existing behavior, but ensure it works)
+      if (e.key === 'Escape') {
+        const button = document.getElementById('chatToggleBtn');
+        if (button) {
+          button.click();
+        }
+        return;
+      }
+      
+      // Cmd/Ctrl + M for maximize toggle
+      if ((e.metaKey || e.ctrlKey) && e.key === 'm') {
+        e.preventDefault();
+        toggleMaximize();
+        return;
+      }
+    });
+  }
+  
+  // Setup double-click header to maximize
+  function setupDoubleClickMaximize(chatkitElement) {
+    let clickTimeout = null;
+    let lastClickTarget = null;
+    
+    const handleClick = (e) => {
+      // Don't trigger on button clicks or interactive elements
+      if (e.target.closest('.chatkit-resize-btn') || 
+          e.target.closest('button') ||
+          e.target.closest('a') ||
+          e.target.closest('input') ||
+          e.target.closest('textarea')) {
+        return;
+      }
+      
+      // Check if this is a double click on the same target
+      if (clickTimeout !== null && e.target === lastClickTarget) {
+        clearTimeout(clickTimeout);
+        clickTimeout = null;
+        // Double click detected
+        e.preventDefault();
+        e.stopPropagation();
+        toggleMaximize();
+      } else {
+        lastClickTarget = e.target;
+        clickTimeout = setTimeout(() => {
+          clickTimeout = null;
+          lastClickTarget = null;
+        }, 300);
+      }
+    };
+    
+    // Try to attach to header
+    const tryAttachToHeader = () => {
+      const header = chatkitElement.shadowRoot?.querySelector('header') || 
+                    chatkitElement.querySelector('header') ||
+                    chatkitElement.querySelector('[role="banner"]');
+      
+      if (header) {
+        header.addEventListener('click', handleClick);
+      } else {
+        // Fallback: attach to chatkit element itself (but only top area)
+        chatkitElement.addEventListener('click', (e) => {
+          // Only trigger if click is in top 60px (header area)
+          const rect = chatkitElement.getBoundingClientRect();
+          const clickY = e.clientY - rect.top;
+          if (clickY <= 60) {
+            handleClick(e);
+          }
+        });
+      }
+    };
+    
+    // Wait a bit for ChatKit to render
+    setTimeout(tryAttachToHeader, 500);
   }
 
   async function initChatKit() {
@@ -451,6 +1270,13 @@
       // Initialize ChatKit
       console.log('🚀 Initializing ChatKit with final config:', options);
       chatkitElement.setOptions(options);
+      
+      // Wait for ChatKit to initialize, then setup resize controls
+      setTimeout(() => {
+        setupResizeControls(chatkitElement);
+        setupKeyboardShortcuts(chatkitElement);
+        setupDoubleClickMaximize(chatkitElement);
+      }, 500);
 
       // Monitor for iframe creation and fix relative URLs
       const observer = new MutationObserver((mutations) => {

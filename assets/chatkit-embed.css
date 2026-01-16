@@ -55,11 +55,15 @@
   width: 400px;
   height: 600px;
   max-height: calc(100vh - 140px);
+  min-width: 280px;
+  min-height: 400px;
   z-index: 9998;
   display: none;
   overflow: hidden;
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  transition: width 0.2s ease, height 0.2s ease, top 0.2s ease, left 0.2s ease, right 0.2s ease, bottom 0.2s ease;
+  resize: none; /* Prevent browser default resize */
 }
 
 #myChatkit openai-chatkit {
@@ -379,4 +383,153 @@ body[data-chatkit-shadow="bold"] #chatToggleBtn {
 
 body[data-chatkit-shadow="bold"] #myChatkit {
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.35);
+}
+
+/* === RESIZE FUNCTIONALITY === */
+
+/* Disable transitions during active resize */
+#myChatkit.chatkit-resizing {
+  transition: none !important;
+}
+
+/* Size state classes */
+#myChatkit.chatkit-small {
+  width: 360px;
+  height: 500px;
+}
+
+#myChatkit.chatkit-medium {
+  width: 400px;
+  height: 600px;
+}
+
+#myChatkit.chatkit-large {
+  width: 600px;
+  height: 800px;
+}
+
+#myChatkit.chatkit-maximized {
+  width: calc(100vw - 32px) !important;
+  height: calc(100vh - 80px) !important;
+  top: 16px !important;
+  left: 16px !important;
+  right: auto !important;
+  bottom: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* Resize control buttons in header */
+.chatkit-resize-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.chatkit-resize-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  opacity: 0.7;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+  font-size: 14px;
+  line-height: 1;
+  user-select: none;
+}
+
+.chatkit-resize-btn:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.chatkit-resize-btn:active {
+  background-color: rgba(0, 0, 0, 0.15);
+}
+
+.chatkit-resize-btn.active {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.15);
+}
+
+.chatkit-resize-btn:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.chatkit-resize-btn .chatkit-icon {
+  display: inline-block;
+  font-size: 16px;
+  line-height: 1;
+  width: 16px;
+  height: 16px;
+  text-align: center;
+}
+
+/* Overlay controls (fallback when header not accessible) */
+.chatkit-resize-controls-overlay {
+  pointer-events: none;
+}
+
+.chatkit-resize-controls-overlay .chatkit-resize-controls {
+  pointer-events: auto;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+  .chatkit-resize-controls-overlay .chatkit-resize-controls {
+    background: rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* Hide resize controls on mobile */
+@media (max-width: 768px) {
+  .chatkit-resize-controls {
+    display: none !important;
+  }
+  
+  .chatkit-resize-controls-overlay {
+    display: none !important;
+  }
+  
+  #myChatkit.chatkit-maximized {
+    width: calc(100vw - 24px) !important;
+    height: calc(100vh - 24px) !important;
+    top: 12px !important;
+    left: 12px !important;
+  }
+}
+
+/* Disable resize on very small screens */
+@media (max-width: 480px) {
+  #myChatkit.chatkit-maximized {
+    width: 100vw !important;
+    height: 100vh !important;
+    top: 0 !important;
+    left: 0 !important;
+    border-radius: 0 !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  #myChatkit {
+    transition: none !important;
+  }
+  
+  .chatkit-resize-btn {
+    transition: none !important;
+  }
 }
