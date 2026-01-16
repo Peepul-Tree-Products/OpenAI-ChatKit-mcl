@@ -493,19 +493,21 @@ body[data-chatkit-shadow="bold"] #myChatkit {
 
 .chatkit-resize-controls-overlay .chatkit-resize-controls {
   pointer-events: auto;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: 10px;
-  padding: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.06);
-  gap: 4px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 8px 0 8px 8px; /* Rounded on 3 sides, sharp on right to align with window edge */
+  padding: 4px 6px 4px 4px; /* Tighter padding, less on right to hug edge */
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  gap: 3px;
+  border-right: 1px solid rgba(0, 0, 0, 0.06); /* Subtle edge connection */
 }
 
 .chatkit-resize-controls-overlay .chatkit-resize-btn {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   color: rgba(0, 0, 0, 0.7);
+  border-radius: 5px;
 }
 
 .chatkit-resize-controls-overlay .chatkit-resize-btn:hover {
@@ -520,8 +522,9 @@ body[data-chatkit-shadow="bold"] #myChatkit {
 
 @media (prefers-color-scheme: dark) {
   .chatkit-resize-controls-overlay .chatkit-resize-controls {
-    background: rgba(30, 30, 30, 0.95);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    background: rgba(30, 30, 30, 0.98);
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
   }
   
   .chatkit-resize-controls-overlay .chatkit-resize-btn {

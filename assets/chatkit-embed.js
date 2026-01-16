@@ -248,10 +248,7 @@
       };
       
       // Update position when chatkit moves or state changes
-      const overlayObserver = new MutationObserver((mutations) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/b8a6592c-6811-4df8-b707-312c15aa58fd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatkit-embed.js:244',message:'MutationObserver triggered',data:{mutationCount:mutations.length,attributes:mutations.map(m => m.attributeName)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
+      const overlayObserver = new MutationObserver(() => {
         updatePosition();
       });
       overlayObserver.observe(chatkit, { attributes: true, attributeFilter: ['style'] });
@@ -259,10 +256,7 @@
       // Use ResizeObserver if available (more reliable for size changes)
       let resizeObserver = null;
       if (typeof ResizeObserver !== 'undefined') {
-        resizeObserver = new ResizeObserver((entries) => {
-          // #region agent log
-          fetch('http://127.0.0.1:7244/ingest/b8a6592c-6811-4df8-b707-312c15aa58fd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatkit-embed.js:251',message:'ResizeObserver triggered',data:{entryCount:entries.length,contentRect:entries[0]?.contentRect},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
+        resizeObserver = new ResizeObserver(() => {
           updatePosition();
         });
         resizeObserver.observe(chatkit);
@@ -271,9 +265,6 @@
       // Update on window resize (with debouncing)
       let resizeTimeout = null;
       const resizeHandler = () => {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/b8a6592c-6811-4df8-b707-312c15aa58fd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatkit-embed.js:259',message:'Window resize event',data:{windowWidth:window.innerWidth,windowHeight:window.innerHeight},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         if (resizeTimeout) clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
           updatePosition();
@@ -290,19 +281,10 @@
     }
     
     updateControlPosition() {
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/b8a6592c-6811-4df8-b707-312c15aa58fd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatkit-embed.js:257',message:'updateControlPosition called',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      
       const overlay = this.elements.overlay;
       const chatkit = this.elements.chatkit;
       
-      if (!overlay || !chatkit) {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/b8a6592c-6811-4df8-b707-312c15aa58fd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatkit-embed.js:262',message:'updateControlPosition early return',data:{hasOverlay:!!overlay,hasChatkit:!!chatkit},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-        return;
-      }
+      if (!overlay || !chatkit) return;
       
       // Hide controls when chat is closed
       if (!this.state.isOpen || chatkit.style.display === 'none') {
@@ -315,14 +297,11 @@
       
       const rect = chatkit.getBoundingClientRect();
       const isMaximized = this.state.size === 'maximized';
-      const controlPadding = 12; // Distance from chat window edge
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7244/ingest/b8a6592c-6811-4df8-b707-312c15aa58fd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatkit-embed.js:278',message:'Position calculation',data:{rectTop:rect.top,rectRight:rect.right,rectWidth:rect.width,rectHeight:rect.height,windowWidth:window.innerWidth,windowHeight:window.innerHeight,isMaximized:isMaximized,stateSize:this.state.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
+      // Reduced padding for tighter integration with window edge (like native window controls)
+      const controlPadding = 6; // Close to edge for native feel
       
       if (isMaximized) {
-        // Maximized: Position at top-right of viewport with padding
+        // Maximized: Position at top-right of viewport, close to edge
         overlay.style.cssText = `
           position: fixed;
           top: ${controlPadding}px;
@@ -331,7 +310,8 @@
           pointer-events: none;
         `;
       } else {
-        // Regular size: Position at top-right of chat window, slightly inside
+        // Regular size: Position at top-right of chat window, aligned to window edge
+        // Match the window's border radius for visual cohesion
         const topOffset = rect.top + controlPadding;
         const rightOffset = window.innerWidth - rect.right + controlPadding;
         overlay.style.cssText = `
@@ -341,10 +321,6 @@
           z-index: 10002;
           pointer-events: none;
         `;
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/b8a6592c-6811-4df8-b707-312c15aa58fd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatkit-embed.js:295',message:'Applied regular position',data:{topOffset:topOffset,rightOffset:rightOffset,computedTop:overlay.style.top,computedRight:overlay.style.right},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
       }
       
       if (this.elements.controls) {
@@ -1054,10 +1030,11 @@
       const rect = chatkit.getBoundingClientRect();
       const isMaximized = resizeState.currentSize === 'maximized';
       
-      const controlPadding = 12;
+      // Reduced padding for tighter integration with window edge (like native window controls)
+      const controlPadding = 6;
       
       if (isMaximized) {
-        // Maximized: Position at top-right of viewport with padding
+        // Maximized: Position at top-right of viewport, close to edge
         overlay.style.cssText = `
           position: fixed;
           top: ${controlPadding}px;
@@ -1066,7 +1043,7 @@
           pointer-events: none;
         `;
       } else {
-        // Regular size: Position at top-right of chat window, slightly inside
+        // Regular size: Position at top-right of chat window, aligned to window edge
         const topOffset = rect.top + controlPadding;
         const rightOffset = window.innerWidth - rect.right + controlPadding;
         overlay.style.cssText = `
