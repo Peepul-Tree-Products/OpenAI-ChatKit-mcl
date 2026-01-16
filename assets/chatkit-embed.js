@@ -6,11 +6,6 @@
   let retryCount = 0;
   const MAX_RETRIES = 3;
 
-  // Session preloading state
-  let preloadedSecret = null;
-  let preloadPromise = null;
-  let sessionPreloaded = false;
-
   // Helper to convert WordPress boolean strings to actual booleans
   function toBool(value) {
     if (typeof value === 'boolean') return value;
@@ -19,104 +14,48 @@
     return !!value;
   }
 
-  /**
-   * Gather client-side context to pass to the session
-   * This helps the workflow have more information about the user's environment
-   */
-  function getClientContext() {
-    const context = {};
-    
-    try {
-      // Page title for context
-      context.page_title = document.title || '';
-      
-      // Viewport size (helps with responsive considerations)
-      context.viewport_width = window.innerWidth.toString();
-      
-      // User's timezone
-      context.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-      
-      // Browser language preference
-      context.language = navigator.language || '';
-    } catch (e) {
-      console.warn('Error gathering client context:', e);
-    }
-    
-    return context;
-  }
-
-  /**
-   * Preload session in background for faster first interaction
-   * Called after page load to have session ready when user opens chat
-   */
-  async function preloadSession() {
-    if (!toBool(config.preloadSession) || preloadPromise || !config.restUrl) {
-      return null;
-    }
-
-    console.log('🔄 Preloading ChatKit session...');
-    
-    preloadPromise = (async () => {
-      try {
-        const body = {};
-        
-        // Add client context if page context is enabled
-        if (toBool(config.passPageContext)) {
-          body.context = getClientContext();
-        }
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-        const response = await fetch(config.restUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-          signal: controller.signal,
-          credentials: 'same-origin'
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        if (data.client_secret) {
-          preloadedSecret = data.client_secret;
-          sessionPreloaded = true;
-          console.log('✅ Session preloaded successfully');
-          return preloadedSecret;
-        }
-        
-        throw new Error('No client_secret in response');
-      } catch (error) {
-        console.warn('⚠️ Session preload failed (will retry on open):', error.message);
-        preloadPromise = null;
-        return null;
-      }
-    })();
-
-    return preloadPromise;
-  }
-
   function loadChatkitScript() {
     return new Promise((resolve, reject) => {
       if (customElements.get('openai-chatkit')) {
+        console.log('✅ ChatKit custom element already registered');
         resolve();
         return;
       }
 
       const script = document.createElement('script');
+      // Use latest ChatKit library from CDN
       script.src = 'https://cdn.platform.openai.com/deployments/chatkit/chatkit.js';
       script.defer = true;
-      script.onload = resolve;
-      script.onerror = () => reject(new Error('Failed to load ChatKit CDN'));
+      
+      script.onload = () => {
+        console.log('✅ ChatKit library loaded from CDN');
+        // Wait a bit for custom element to register
+        setTimeout(() => {
+          if (customElements.get('openai-chatkit')) {
+            console.log('✅ ChatKit custom element registered successfully');
+            resolve();
+          } else {
+            console.warn('⚠️ ChatKit custom element not found after load, waiting...');
+            customElements.whenDefined('openai-chatkit').then(() => {
+              console.log('✅ ChatKit custom element defined');
+              resolve();
+            }).catch(reject);
+          }
+        }, 100);
+      };
+      
+      script.onerror = (error) => {
+        console.error('❌ Failed to load ChatKit CDN script:', error);
+        reject(new Error('Failed to load ChatKit CDN - check network connection and CDN availability'));
+      };
+      
       document.head.appendChild(script);
+      console.log('📥 Loading ChatKit library from CDN...');
     });
   }
+
+  // Store deployment URL if available from session
+  let deploymentUrl = null;
 
   async function getClientSecret() {
     try {
@@ -124,42 +63,16 @@
         throw new Error('Missing configuration');
       }
 
-      // Use preloaded secret if available (performance optimization)
-      if (preloadedSecret) {
-        const secret = preloadedSecret;
-        preloadedSecret = null; // Clear for next session
-        console.log('⚡ Using preloaded session (faster!)');
-        return secret;
-      }
-
-      // Wait for preload if in progress
-      if (preloadPromise) {
-        console.log('⏳ Waiting for preloading session...');
-        const secret = await preloadPromise;
-        if (secret) {
-          preloadedSecret = null;
-          preloadPromise = null;
-          return secret;
-        }
-      }
-
-      // Fall back to fetching a new session
-      console.log('🔄 Fetching new session...');
-      
-      const body = {};
-      
-      // Add client context if page context is enabled
-      if (toBool(config.passPageContext)) {
-        body.context = getClientContext();
-      }
+      const headers = {
+        'Content-Type': 'application/json'
+      };
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const response = await fetch(config.restUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        headers: headers,
         signal: controller.signal,
         credentials: 'same-origin'
       });
@@ -182,6 +95,15 @@
       
       if (!data.client_secret) {
         throw new Error('Invalid response: missing client_secret');
+      }
+
+      // Store deployment URL if provided
+      if (data.deployment_url) {
+        deploymentUrl = data.deployment_url;
+        console.log('✅ ChatKit: Deployment URL received:', deploymentUrl);
+      } else {
+        console.warn('⚠️ ChatKit: No deployment URL in session response');
+        console.log('📋 Full session response:', data);
       }
       
       return data.client_secret;
@@ -372,11 +294,7 @@
         headerTitleText: config.headerTitleText,
         historyEnabled: config.historyEnabled,
         enableAttachments: config.enableAttachments,
-        disclaimerText: config.disclaimerText ? 'Set' : 'Not set',
-        // Performance optimization settings
-        preloadSession: config.preloadSession,
-        passPageContext: config.passPageContext,
-        sessionPreloaded: sessionPreloaded
+        disclaimerText: config.disclaimerText ? 'Set' : 'Not set'
       });
 
       // ✅ BUILD BASE OPTIONS with SAFE values
@@ -384,6 +302,8 @@
         api: {
           getClientSecret: getClientSecret
         },
+        // Add deployment URL if available (fixes relative path issues)
+        ...(deploymentUrl && { deploymentUrl: deploymentUrl }),
         theme: {
           colorScheme: config.themeMode || 'dark',
           // ✅ ALWAYS FIXED (CSS handles visual customization)
@@ -532,6 +452,40 @@
       console.log('🚀 Initializing ChatKit with final config:', options);
       chatkitElement.setOptions(options);
 
+      // Monitor for iframe creation and fix relative URLs
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeName === 'IFRAME' || (node.querySelector && node.querySelector('iframe'))) {
+              const iframe = node.nodeName === 'IFRAME' ? node : node.querySelector('iframe');
+              if (iframe && iframe.src) {
+                // Check if iframe src is a relative path (starts with /)
+                if (iframe.src.startsWith('/') && !iframe.src.startsWith('//')) {
+                  console.error('❌ ChatKit: Detected relative iframe URL:', iframe.src);
+                  console.error('⚠️ This should be an absolute URL from OpenAI CDN');
+                  
+                  // Try to construct absolute URL from CDN
+                  const cdnBase = 'https://cdn.platform.openai.com';
+                  const fixedUrl = cdnBase + iframe.src;
+                  console.log('🔧 Attempting to fix URL to:', fixedUrl);
+                  
+                  // Note: We can't directly modify iframe src due to CORS, but we can log it
+                  // The real fix needs to come from the ChatKit library configuration
+                } else {
+                  console.log('✅ ChatKit iframe URL looks correct:', iframe.src);
+                }
+              }
+            }
+          });
+        });
+      });
+
+      // Start observing the chatkit element for iframe creation
+      observer.observe(chatkitElement, {
+        childList: true,
+        subtree: true
+      });
+
       console.log('✅ ChatKit initialized successfully');
 
       if (typeof gtag !== 'undefined') {
@@ -559,21 +513,6 @@
     document.addEventListener('DOMContentLoaded', initChatKit);
   } else {
     setTimeout(initChatKit, 0);
-  }
-
-  // Preload session in background after page fully loads (performance optimization)
-  // This makes the first chat interaction faster by having the session ready
-  function startPreload() {
-    if (toBool(config.preloadSession)) {
-      // Delay preload slightly to not compete with critical page resources
-      setTimeout(preloadSession, 2000);
-    }
-  }
-
-  if (document.readyState === 'complete') {
-    startPreload();
-  } else {
-    window.addEventListener('load', startPreload);
   }
 
   window.addEventListener('beforeunload', () => {
