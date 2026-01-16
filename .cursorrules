@@ -1,0 +1,514 @@
+# ChatKit WordPress Plugin - Cursor Rules
+
+## Project Overview
+
+This is the OpenAI ChatKit WordPress plugin for My Canadian Life website. All code should follow the style guide and implementation guide to ensure consistency with the website's brand identity.
+
+## Design System Reference
+
+- **Style Guide**: See `STYLE_GUIDE.md` for complete design system
+- **Implementation Guide**: See `IMPLEMENTATION_GUIDE.md` for implementation patterns
+- **Brand Colors**: Primary Red `#DC143C`, Accent Orange `#FF4500`, Background White `#FFFFFF`
+- **Typography**: System fonts (-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif)
+
+## Design System Enforcement
+
+### Colors
+
+ALWAYS use brand colors from the style guide:
+- Primary Red: `#DC143C` (headers, footers, brand elements)
+- Accent Orange: `#FF4500` (chat toggle, interactive elements - DEFAULT for chat widget)
+- Background: `#FFFFFF` (white)
+- Text Primary: `#000000` or `#1A1A1A` (near black)
+- Text Secondary: `#666666` (gray)
+- Text on Red/Orange: `#FFFFFF` (white)
+
+When creating new UI elements, use Accent Orange (`#FF4500`) as the default color for chat widget components unless specifically matching website header/footer design.
+
+### Spacing
+
+ALWAYS use multiples of 4px for all spacing:
+- Base unit: 4px
+- Standard spacing: 8px, 12px, 16px
+- Major spacing: 20px, 24px
+- Chat button position: 16px from edges
+- Resize controls: 6px from window edge (when in overlay)
+
+### Typography
+
+- Font family: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`
+- Button font: `15px`, weight `700`
+- Body text: `14px` to `16px`, weight `400`
+- Line height: `1.4` to `1.5` for body, `1.2` for buttons
+
+### Border Radius
+
+- Chat toggle button: `50px` (pill shape)
+- Chat window: `16px`
+- Overlay controls: `8px` to `10px`
+- Control buttons: `5px` to `6px`
+- Input fields: `8px`
+
+### Shadows
+
+Use elevation levels:
+- Level 1: `0 2px 8px rgba(0, 0, 0, 0.1)`
+- Level 2: `0 4px 16px rgba(0, 0, 0, 0.15)`
+- Level 3: `0 8px 32px rgba(0, 0, 0, 0.25)`
+- Overlay: `0 4px 16px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.06)`
+
+### Transitions
+
+- Standard: `0.2s ease`
+- Fast: `0.15s ease`
+- Slow: `0.3s ease`
+
+## Code Style Rules
+
+### CSS Naming Conventions
+
+- Use BEM-like naming: `.chatkit-{component}-{element}--{modifier}`
+- ALWAYS prefix ChatKit styles with `chatkit-`
+- Use kebab-case for all class names
+- Be descriptive but concise
+
+Examples:
+- `.chatkit-resize-controls`
+- `.chatkit-resize-btn`
+- `.chatkit-resize-btn--active`
+- `.chatkit-resize-controls-overlay`
+
+### CSS Organization
+
+Organize CSS in this order:
+1. Base styles (button, window)
+2. Component styles (controls, overlays)
+3. Responsive styles (media queries)
+4. Dark mode styles
+5. Accessibility styles (reduced motion, focus states)
+
+### JavaScript Patterns
+
+**Class Structure**:
+```javascript
+class ChatWindowManager {
+  constructor(config) {
+    this.config = config;
+    this.state = { /* state properties */ };
+    this.elements = { /* DOM references */ };
+    this.observers = [];
+    this.init();
+  }
+  
+  // Public methods
+  methodName() { }
+  
+  // Cleanup
+  cleanup() { }
+}
+```
+
+**Function Organization**:
+1. Helper functions
+2. Core class definition
+3. Global instance
+4. Initialization functions
+5. Legacy compatibility
+
+### File Organization
+
+- CSS: `assets/chatkit-embed.css`
+- JavaScript: `assets/chatkit-embed.js`
+- Main Plugin: `chatkit-wp.php`
+- Admin: `admin/settings-page.php`
+- Documentation: `STYLE_GUIDE.md`, `IMPLEMENTATION_GUIDE.md`
+
+## Component Guidelines
+
+### Creating Buttons
+
+ALWAYS include:
+- Proper size (32px × 32px for controls, or specified)
+- Border radius (5px to 6px)
+- Hover state (background color change, translateY(-1px))
+- Active state (background color, translateY(0))
+- Focus state (2px outline with rgba(0, 0, 0, 0.3))
+- ARIA labels (`aria-label`, `title`)
+- Type attribute (`type="button"`)
+- Transition (`all 0.2s ease`)
+
+Pattern:
+```css
+.chatkit-new-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.65);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.chatkit-new-btn:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.85);
+  transform: translateY(-1px);
+}
+
+.chatkit-new-btn:active {
+  background-color: rgba(0, 0, 0, 0.12);
+  transform: translateY(0);
+}
+
+.chatkit-new-btn:focus-visible {
+  outline: 2px solid rgba(0, 0, 0, 0.3);
+  outline-offset: 2px;
+}
+```
+
+### Creating Overlays
+
+ALWAYS include:
+- Fixed positioning
+- Proper z-index (10002 for overlays)
+- Backdrop blur (`backdrop-filter: blur(12px)`)
+- Border radius (8px to 10px)
+- Shadow (elevation level 4)
+- Pointer events handling (`pointer-events: none` on container, `pointer-events: auto` on interactive elements)
+
+### Position Updates
+
+ALWAYS use `requestAnimationFrame` for smooth position updates:
+```javascript
+let rafId = null;
+const updatePosition = () => {
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(() => {
+    // Update position
+    rafId = null;
+  });
+};
+```
+
+## Accessibility Requirements
+
+### Required Attributes
+
+ALWAYS include for interactive elements:
+- `aria-label` - Descriptive label for screen readers
+- `title` - Tooltip text
+- `type="button"` - For buttons
+- `role` - Where appropriate (toolbar, button, dialog)
+- `aria-expanded` - For toggle buttons
+- `aria-modal` - For modal windows
+
+### Keyboard Navigation
+
+ALWAYS support:
+- Tab navigation between interactive elements
+- Enter/Space to activate buttons
+- Escape to close modals/windows
+- Visible focus indicators (2px outline minimum)
+
+### Focus Management
+
+- Set focus to first interactive element when opening modal
+- Return focus to trigger element when closing
+- Trap focus within modal/window
+- Visible focus outlines on all interactive elements
+
+### Color Contrast
+
+- ALWAYS verify color contrast meets WCAG AA (4.5:1 for normal text, 3:1 for large text)
+- Test text on backgrounds for readability
+- Never rely on color alone to convey information
+- Use icons or text labels in addition to color
+
+### Touch Targets
+
+- Minimum size: 44px × 44px (mobile)
+- Recommended: 48px × 48px for better usability
+- Minimum spacing: 8px between touch targets
+
+### Screen Reader Support
+
+- Use semantic HTML (`<button>`, `<header>`, `<nav>`, etc.)
+- Provide text alternatives for all icons
+- Maintain logical reading order
+- Test with screen readers
+
+### Reduced Motion
+
+ALWAYS respect `prefers-reduced-motion`:
+```css
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+```
+
+## Responsive Design Requirements
+
+### Breakpoints
+
+- Mobile: `max-width: 768px`
+- Desktop: `min-width: 769px`
+- Very small: `max-width: 480px`
+
+### Mobile Considerations
+
+- Hide resize controls on mobile
+- Full-screen chat window
+- Simplified interactions
+- Larger touch targets (minimum 44px)
+
+### Desktop Considerations
+
+- Resize controls visible
+- Resizable chat window
+- Hover states
+- Keyboard navigation support
+
+## Animation Guidelines
+
+### Transition Timing
+
+- Standard: `0.2s ease`
+- Fast: `0.15s ease`
+- Slow: `0.3s ease`
+
+### Animation Patterns
+
+- Use `transform` and `opacity` for performance
+- Avoid animating `width`, `height`, `top`, `left` when possible
+- Always include reduced motion support
+
+## Icon Guidelines
+
+### Icon Implementation
+
+- Use SVG icons (scalable, small file size)
+- Size: 14px × 14px for control buttons
+- Use `currentColor` for fill/stroke (inherits text color)
+- Stroke width: `1.5px` for 14px icons
+- Consistent visual weight
+
+### Icon Creation
+
+```html
+<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5">
+  <!-- Path definitions -->
+</svg>
+```
+
+## State Management
+
+### ChatWindowManager State
+
+Track these properties:
+- `isOpen` - Chat window open/closed state
+- `size` - Current window size (small, medium, large, maximized, custom)
+- `previousSize` - Previous size before maximize
+- `width` / `height` - Custom dimensions
+- `controlsLocation` - 'header' or 'overlay'
+
+### Element References
+
+Store in `this.elements`:
+- `chatkit` - Main chat window element
+- `button` - Toggle button
+- `controls` - Resize control container
+- `overlay` - Overlay container (if used)
+- `header` - ChatKit header element (if found)
+
+## Cleanup Requirements
+
+ALWAYS include cleanup:
+- Remove event listeners
+- Disconnect observers (MutationObserver, ResizeObserver)
+- Remove DOM elements
+- Cancel animation frames
+- Clear timeouts
+- Reset state
+
+Pattern:
+```javascript
+cleanup() {
+  // Remove observers
+  this.observers.forEach(({ observer, handler }) => {
+    if (observer) observer.disconnect();
+    if (handler) window.removeEventListener('resize', handler);
+  });
+  
+  // Remove elements
+  if (this.elements.overlay) {
+    this.elements.overlay.remove();
+  }
+  
+  // Reset state
+  this.elements = {};
+  this.observers = [];
+}
+```
+
+## Error Handling
+
+ALWAYS include error handling:
+- Try-catch blocks for async operations
+- Fallback to overlay if header injection fails
+- Graceful degradation
+- User-friendly error messages
+
+## Performance Optimization
+
+### CSS Optimization
+
+- Use efficient selectors (avoid deep nesting)
+- Minimize use of `!important`
+- Use `transform` and `opacity` for animations
+- Optimize transitions
+
+### JavaScript Optimization
+
+- Debounce resize events
+- Use `requestAnimationFrame` for smooth updates
+- Cache DOM queries
+- Clean up event listeners and observers
+- Use `MutationObserver` and `ResizeObserver` efficiently
+
+## Documentation Requirements
+
+### Code Comments
+
+- Comment complex CSS logic
+- Document component behavior
+- Explain non-obvious JavaScript patterns
+- Reference style guide where applicable
+
+### Documentation Updates
+
+- Update style guide when adding new design elements
+- Update implementation guide when adding new patterns
+- Maintain version history in guides
+
+## Testing Requirements
+
+Before considering code complete:
+
+1. **Visual Testing**
+   - [ ] Colors match style guide
+   - [ ] Spacing follows 4px grid
+   - [ ] Typography matches specifications
+   - [ ] Dark mode works correctly
+
+2. **Responsive Testing**
+   - [ ] Mobile styles correct
+   - [ ] Desktop styles correct
+   - [ ] Touch targets adequate size
+
+3. **Accessibility Testing**
+   - [ ] Color contrast meets WCAG AA
+   - [ ] Keyboard navigation works
+   - [ ] Screen reader compatible
+   - [ ] Focus indicators visible
+
+4. **Functional Testing**
+   - [ ] All interactions work
+   - [ ] No JavaScript errors
+   - [ ] Proper cleanup on close
+   - [ ] Edge cases handled
+
+## Common Patterns
+
+### Header Injection vs Overlay
+
+PREFER header injection when:
+- Header is enabled (`config.showHeader === true`)
+- Header is found (after retry attempts)
+- Desktop viewport (> 768px)
+
+Use overlay when:
+- Header is disabled
+- Header not found after retries
+- Mobile viewport (≤ 768px)
+- Header injection fails
+
+### Position Updates
+
+Use `requestAnimationFrame` for smooth updates:
+```javascript
+let rafId = null;
+const updatePosition = () => {
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(() => {
+    this.updateControlPosition();
+    rafId = null;
+  });
+};
+```
+
+### ResizeObserver Pattern
+
+```javascript
+if (typeof ResizeObserver !== 'undefined') {
+  const resizeObserver = new ResizeObserver(() => {
+    updatePosition();
+  });
+  resizeObserver.observe(element);
+  this.observers.push({ resizeObserver });
+}
+```
+
+## File-Specific Rules
+
+### assets/chatkit-embed.css
+
+- Follow CSS organization structure
+- Use brand colors only
+- Include all states (hover, active, focus)
+- Add responsive styles
+- Include dark mode support
+- Add reduced motion support
+
+### assets/chatkit-embed.js
+
+- Follow ChatWindowManager class pattern
+- Use shared button creation method
+- Include proper cleanup
+- Handle errors gracefully
+- Cache DOM queries
+- Use observers efficiently
+
+### chatkit-wp.php
+
+- Follow WordPress coding standards
+- Sanitize all inputs
+- Escape all outputs
+- Use proper nonces for security
+- Follow WordPress plugin structure
+
+## Version Compatibility
+
+- Minimum WordPress: 5.8
+- Minimum PHP: 7.4
+- Browser support: Modern browsers (Chrome, Firefox, Safari, Edge)
+- Mobile: iOS Safari, Chrome Mobile
+
+## References
+
+- Style Guide: `STYLE_GUIDE.md`
+- Implementation Guide: `IMPLEMENTATION_GUIDE.md`
+- WordPress Coding Standards: https://developer.wordpress.org/coding-standards/
+- WCAG 2.1: https://www.w3.org/WAI/WCAG21/quickref/
+
+---
+
+**Important**: Always refer to the Style Guide and Implementation Guide when making changes. When in doubt, follow existing patterns in the codebase. Consistency is key to maintaining a polished user experience.
