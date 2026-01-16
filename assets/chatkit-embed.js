@@ -246,22 +246,22 @@
         { 
           key: 'small', 
           label: 'Small window', 
-          icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="10" height="10" rx="1"/></svg>' 
+          icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="10" height="10" rx="1.5"/></svg>' 
         },
         { 
           key: 'medium', 
           label: 'Medium window', 
-          icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="11" height="11" rx="1"/><rect x="3.5" y="3.5" width="7" height="7" rx="0.5"/></svg>' 
+          icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="11" height="11" rx="1.5"/><rect x="3.5" y="3.5" width="7" height="7" rx="0.5"/></svg>' 
         },
         { 
           key: 'large', 
           label: 'Large window', 
-          icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="12" height="12" rx="1"/><rect x="2.5" y="2.5" width="9" height="9" rx="0.5"/><rect x="4" y="4" width="6" height="6" rx="0.5"/></svg>' 
+          icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="12" height="12" rx="1.5"/><rect x="2.5" y="2.5" width="9" height="9" rx="0.5"/><rect x="4" y="4" width="6" height="6" rx="0.5"/></svg>' 
         },
         { 
           key: 'maximize', 
           label: 'Maximize window', 
-          icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5h10v7H2z"/><path d="M5 2h7v7"/></svg>' 
+          icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5h10v7H2z"/><path d="M5 2h7v7"/></svg>' 
         }
       ];
       
@@ -545,12 +545,12 @@
           const icon = btn.querySelector('.chatkit-icon');
           if (icon) {
             if (this.state.size === 'maximized') {
-              // Restore icon (two overlapping windows)
-              icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h8v7H3z"/><path d="M5 2h7v7"/><path d="M5 5l4 4M9 5l-4 4"/></svg>';
+              // Restore icon (two overlapping windows with diagonal lines)
+              icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h8v7H3z"/><path d="M5 2h7v7"/><path d="M5 5l4 4M9 5l-4 4"/></svg>';
               btn.setAttribute('aria-label', 'Restore window size');
             } else {
               // Maximize icon (fullscreen)
-              icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5h10v7H2z"/><path d="M5 2h7v7"/></svg>';
+              icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5h10v7H2z"/><path d="M5 2h7v7"/></svg>';
               btn.setAttribute('aria-label', 'Maximize window');
             }
           }

@@ -70,6 +70,30 @@
   width: 100%;
   height: 100%;
   display: block;
+  position: relative;
+  overflow: hidden; /* Prevent content from overlapping header */
+}
+
+/* Ensure header stays on top and contains controls properly */
+#myChatkit openai-chatkit header,
+#myChatkit openai-chatkit [role="banner"] {
+  position: relative;
+  z-index: 10; /* Ensure header is above content */
+  overflow: visible; /* Allow controls to be fully visible */
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap; /* Prevent wrapping that could cause overlap */
+}
+
+/* Ensure chat content respects header boundaries */
+#myChatkit openai-chatkit main,
+#myChatkit openai-chatkit [role="main"],
+#myChatkit openai-chatkit .chat-content,
+#myChatkit openai-chatkit .content {
+  position: relative;
+  z-index: 1; /* Below header */
+  overflow-y: auto; /* Allow scrolling */
+  overflow-x: hidden;
 }
 
 /* Animazione apertura */
@@ -427,6 +451,26 @@ body[data-chatkit-shadow="bold"] #myChatkit {
   margin-left: auto;
   padding: 0 4px;
   position: relative;
+  flex-shrink: 0; /* Prevent controls from shrinking */
+  z-index: 1; /* Ensure controls are above header content but below overlays */
+}
+
+/* Ensure header properly contains resize controls */
+header .chatkit-resize-controls,
+[role="banner"] .chatkit-resize-controls {
+  position: relative;
+  z-index: 10; /* Higher z-index within header context */
+  max-width: fit-content; /* Only take up needed space */
+  overflow: visible; /* Allow hover states to be visible */
+  white-space: nowrap; /* Prevent wrapping */
+}
+
+/* Prevent controls from floating outside header boundaries */
+#myChatkit openai-chatkit header .chatkit-resize-controls,
+#myChatkit openai-chatkit [role="banner"] .chatkit-resize-controls {
+  position: static; /* Use normal flow within header */
+  flex-shrink: 0; /* Don't shrink */
+  align-self: center; /* Vertically center in header */
 }
 
 /* Add subtle separator before controls when in header */
@@ -468,6 +512,9 @@ header .chatkit-resize-btn,
   width: 28px;
   height: 28px;
   margin: 0 2px;
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0; /* Prevent button shrinking */
 }
 
 .chatkit-resize-btn:hover {
@@ -482,12 +529,13 @@ header .chatkit-resize-btn,
 }
 
 .chatkit-resize-btn.active {
-  background-color: rgba(0, 0, 0, 0.12);
-  color: rgba(0, 0, 0, 0.9);
+  background-color: rgba(255, 69, 0, 0.1); /* Accent Orange with low opacity */
+  color: #FF4500; /* Accent Orange from style guide */
 }
 
 .chatkit-resize-btn.active:hover {
-  background-color: rgba(0, 0, 0, 0.16);
+  background-color: rgba(255, 69, 0, 0.15);
+  color: #FF4500;
 }
 
 .chatkit-resize-btn:focus-visible {
@@ -541,8 +589,13 @@ header .chatkit-resize-btn,
 }
 
 .chatkit-resize-controls-overlay .chatkit-resize-btn.active {
-  background-color: rgba(0, 0, 0, 0.15);
-  color: rgba(0, 0, 0, 1);
+  background-color: rgba(255, 69, 0, 0.12); /* Accent Orange with low opacity */
+  color: #FF4500; /* Accent Orange from style guide */
+}
+
+.chatkit-resize-controls-overlay .chatkit-resize-btn.active:hover {
+  background-color: rgba(255, 69, 0, 0.18);
+  color: #FF4500;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -562,8 +615,13 @@ header .chatkit-resize-btn,
   }
   
   .chatkit-resize-controls-overlay .chatkit-resize-btn.active {
-    background-color: rgba(255, 255, 255, 0.15);
-    color: rgba(255, 255, 255, 1);
+    background-color: rgba(255, 69, 0, 0.2); /* Accent Orange with opacity for dark mode */
+    color: #FF4500; /* Accent Orange from style guide */
+  }
+  
+  .chatkit-resize-controls-overlay .chatkit-resize-btn.active:hover {
+    background-color: rgba(255, 69, 0, 0.25);
+    color: #FF4500;
   }
   
   .chatkit-resize-btn {
@@ -576,8 +634,13 @@ header .chatkit-resize-btn,
   }
   
   .chatkit-resize-btn.active {
-    background-color: rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 69, 0, 0.2); /* Accent Orange with opacity for dark mode */
+    color: #FF4500; /* Accent Orange from style guide */
+  }
+  
+  .chatkit-resize-btn.active:hover {
+    background-color: rgba(255, 69, 0, 0.25);
+    color: #FF4500;
   }
   
   /* Dark mode separator for header controls */
