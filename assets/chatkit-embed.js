@@ -173,12 +173,28 @@
       controls.setAttribute('role', 'toolbar');
       controls.setAttribute('aria-label', 'Window size controls');
       
-      // Create size buttons with icons
+      // Create size buttons with SVG icons
       const sizes = [
-        { key: 'small', label: 'Small window', icon: '◻' },
-        { key: 'medium', label: 'Medium window', icon: '▢' },
-        { key: 'large', label: 'Large window', icon: '⬜' },
-        { key: 'maximize', label: 'Maximize window', icon: '⛶' }
+        { 
+          key: 'small', 
+          label: 'Small window', 
+          icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="10" height="10" rx="1"/></svg>' 
+        },
+        { 
+          key: 'medium', 
+          label: 'Medium window', 
+          icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="11" height="11" rx="1"/><rect x="3.5" y="3.5" width="7" height="7" rx="0.5"/></svg>' 
+        },
+        { 
+          key: 'large', 
+          label: 'Large window', 
+          icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="12" height="12" rx="1"/><rect x="2.5" y="2.5" width="9" height="9" rx="0.5"/><rect x="4" y="4" width="6" height="6" rx="0.5"/></svg>' 
+        },
+        { 
+          key: 'maximize', 
+          label: 'Maximize window', 
+          icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5h10v7H2z"/><path d="M5 2h7v7"/></svg>' 
+        }
       ];
       
       sizes.forEach(size => {
@@ -255,22 +271,25 @@
       
       const rect = chatkit.getBoundingClientRect();
       const isMaximized = this.state.size === 'maximized';
+      const controlPadding = 12; // Distance from chat window edge
       
       if (isMaximized) {
         // Maximized: Position at top-right of viewport with padding
         overlay.style.cssText = `
           position: fixed;
-          top: 16px;
-          right: 16px;
+          top: ${controlPadding}px;
+          right: ${controlPadding}px;
           z-index: 10002;
           pointer-events: none;
         `;
       } else {
-        // Regular size: Position at top-right of chat window
+        // Regular size: Position at top-right of chat window, slightly inside
+        const topOffset = rect.top + controlPadding;
+        const rightOffset = window.innerWidth - rect.right + controlPadding;
         overlay.style.cssText = `
           position: fixed;
-          top: ${rect.top + 8}px;
-          right: ${window.innerWidth - rect.right + 8}px;
+          top: ${topOffset}px;
+          right: ${rightOffset}px;
           z-index: 10002;
           pointer-events: none;
         `;
@@ -346,10 +365,12 @@
           const icon = btn.querySelector('.chatkit-icon');
           if (icon) {
             if (this.state.size === 'maximized') {
-              icon.textContent = '⛷';
+              // Restore icon (two overlapping windows)
+              icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h8v7H3z"/><path d="M5 2h7v7"/><path d="M5 5l4 4M9 5l-4 4"/></svg>';
               btn.setAttribute('aria-label', 'Restore window size');
             } else {
-              icon.textContent = '⛶';
+              // Maximize icon (fullscreen)
+              icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5h10v7H2z"/><path d="M5 2h7v7"/></svg>';
               btn.setAttribute('aria-label', 'Maximize window');
             }
           }
@@ -842,12 +863,28 @@
     controls.setAttribute('role', 'toolbar');
     controls.setAttribute('aria-label', 'Window size controls');
     
-    // Create size buttons with icons
+    // Create size buttons with SVG icons
     const sizes = [
-      { key: 'small', label: 'Small window', icon: '◻' },
-      { key: 'medium', label: 'Medium window', icon: '▢' },
-      { key: 'large', label: 'Large window', icon: '⬜' },
-      { key: 'maximize', label: 'Maximize window', icon: '⛶' }
+      { 
+        key: 'small', 
+        label: 'Small window', 
+        icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="10" height="10" rx="1"/></svg>' 
+      },
+      { 
+        key: 'medium', 
+        label: 'Medium window', 
+        icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="11" height="11" rx="1"/><rect x="3.5" y="3.5" width="7" height="7" rx="0.5"/></svg>' 
+      },
+      { 
+        key: 'large', 
+        label: 'Large window', 
+        icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="12" height="12" rx="1"/><rect x="2.5" y="2.5" width="9" height="9" rx="0.5"/><rect x="4" y="4" width="6" height="6" rx="0.5"/></svg>' 
+      },
+      { 
+        key: 'maximize', 
+        label: 'Maximize window', 
+        icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5h10v7H2z"/><path d="M5 2h7v7"/></svg>' 
+      }
     ];
     
     sizes.forEach(size => {
@@ -903,12 +940,28 @@
     controls.setAttribute('role', 'toolbar');
     controls.setAttribute('aria-label', 'Window size controls');
     
-    // Create size buttons with icons
+    // Create size buttons with SVG icons
     const sizes = [
-      { key: 'small', label: 'Small window', icon: '◻' },
-      { key: 'medium', label: 'Medium window', icon: '▢' },
-      { key: 'large', label: 'Large window', icon: '⬜' },
-      { key: 'maximize', label: 'Maximize window', icon: '⛶' }
+      { 
+        key: 'small', 
+        label: 'Small window', 
+        icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="10" height="10" rx="1"/></svg>' 
+      },
+      { 
+        key: 'medium', 
+        label: 'Medium window', 
+        icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="1.5" width="11" height="11" rx="1"/><rect x="3.5" y="3.5" width="7" height="7" rx="0.5"/></svg>' 
+      },
+      { 
+        key: 'large', 
+        label: 'Large window', 
+        icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="12" height="12" rx="1"/><rect x="2.5" y="2.5" width="9" height="9" rx="0.5"/><rect x="4" y="4" width="6" height="6" rx="0.5"/></svg>' 
+      },
+      { 
+        key: 'maximize', 
+        label: 'Maximize window', 
+        icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5h10v7H2z"/><path d="M5 2h7v7"/></svg>' 
+      }
     ];
     
     sizes.forEach(size => {
@@ -948,21 +1001,25 @@
       const rect = chatkit.getBoundingClientRect();
       const isMaximized = resizeState.currentSize === 'maximized';
       
+      const controlPadding = 12;
+      
       if (isMaximized) {
         // Maximized: Position at top-right of viewport with padding
         overlay.style.cssText = `
           position: fixed;
-          top: 16px;
-          right: 16px;
+          top: ${controlPadding}px;
+          right: ${controlPadding}px;
           z-index: 10002;
           pointer-events: none;
         `;
       } else {
-        // Regular size: Position at top-right of chat window
+        // Regular size: Position at top-right of chat window, slightly inside
+        const topOffset = rect.top + controlPadding;
+        const rightOffset = window.innerWidth - rect.right + controlPadding;
         overlay.style.cssText = `
           position: fixed;
-          top: ${rect.top + 8}px;
-          right: ${window.innerWidth - rect.right + 8}px;
+          top: ${topOffset}px;
+          right: ${rightOffset}px;
           z-index: 10002;
           pointer-events: none;
         `;

@@ -246,3 +246,5 @@
 {"location":"chatkit-embed.js:640","message":"Button click event triggered","data":{"currentIsOpen":false,"managerExists":true},"timestamp":1768587784493,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
 {"location":"chatkit-embed.js:645","message":"isOpen toggled","data":{"newIsOpen":true},"timestamp":1768587784494,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
 {"location":"chatkit-embed.js:649","message":"Opening chat","data":{"managerExists":true},"timestamp":1768587784495,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"chatkit-embed.js:640","message":"Button click event triggered","data":{"currentIsOpen":true,"managerExists":true},"timestamp":1768588765059,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
+{"location":"chatkit-embed.js:645","message":"isOpen toggled","data":{"newIsOpen":false},"timestamp":1768588765065,"sessionId":"debug-session","runId":"run1","hypothesisId":"E"}
