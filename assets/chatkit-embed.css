@@ -423,8 +423,25 @@ body[data-chatkit-shadow="bold"] #myChatkit {
 .chatkit-resize-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   margin-left: auto;
+  padding: 0 4px;
+  position: relative;
+}
+
+/* Add subtle separator before controls when in header */
+.chatkit-resize-controls::before {
+  content: '';
+  width: 1px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.1);
+  margin-right: 4px;
+  display: none; /* Only show if there's content before */
+}
+
+header .chatkit-resize-controls::before,
+[role="banner"] .chatkit-resize-controls::before {
+  display: block;
 }
 
 .chatkit-resize-btn {
@@ -443,6 +460,14 @@ body[data-chatkit-shadow="bold"] #myChatkit {
   user-select: none;
   position: relative;
   flex-shrink: 0;
+}
+
+/* Smaller buttons when in header for better fit */
+header .chatkit-resize-btn,
+[role="banner"] .chatkit-resize-btn {
+  width: 28px;
+  height: 28px;
+  margin: 0 2px;
 }
 
 .chatkit-resize-btn:hover {
@@ -553,6 +578,12 @@ body[data-chatkit-shadow="bold"] #myChatkit {
   .chatkit-resize-btn.active {
     background-color: rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.9);
+  }
+  
+  /* Dark mode separator for header controls */
+  header .chatkit-resize-controls::before,
+  [role="banner"] .chatkit-resize-controls::before {
+    background: rgba(255, 255, 255, 0.15);
   }
 }
 

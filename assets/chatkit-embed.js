@@ -22,13 +22,15 @@
         size: 'medium', // 'small', 'medium', 'large', 'maximized', 'custom'
         previousSize: null, // Store size before maximize
         width: 400,
-        height: 600
+        height: 600,
+        controlsLocation: null // 'header' or 'overlay'
       };
       this.elements = {
         chatkit: null,
         button: null,
         controls: null,
-        overlay: null
+        overlay: null,
+        header: null
       };
       this.observers = [];
       this.init();
@@ -150,32 +152,96 @@
     }
     
     setupResizeControls(chatkitElement) {
-      // Always create overlay controls for now (simpler, more reliable)
-      this.createOverlayResizeControls(chatkitElement);
-    }
-    
-    createOverlayResizeControls(chatkitElement) {
-      // Check if overlay already exists
-      let overlay = document.querySelector('.chatkit-resize-controls-overlay');
-      if (overlay) {
-        this.elements.overlay = overlay;
-        this.elements.controls = overlay.querySelector('.chatkit-resize-controls');
-        this.updateControlPosition();
+      // If controls already exist, just update them
+      if (this.elements.controls) {
         this.updateResizeButtons();
         return;
       }
       
-      // Create overlay container
-      overlay = document.createElement('div');
-      overlay.className = 'chatkit-resize-controls-overlay';
+      // Helper to convert WordPress boolean strings to actual booleans
+      const toBool = (value) => {
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'string') return value === '1' || value.toLowerCase() === 'true';
+        if (typeof value === 'number') return value === 1;
+        return !!value;
+      };
       
-      // Create resize controls container
-      const controls = document.createElement('div');
-      controls.className = 'chatkit-resize-controls';
-      controls.setAttribute('role', 'toolbar');
-      controls.setAttribute('aria-label', 'Window size controls');
+      // Try header injection first if header is enabled
+      const headerEnabled = toBool(this.config.showHeader);
       
-      // Create size buttons with SVG icons
+      if (headerEnabled && window.innerWidth > 768) {
+        // Try to find and inject into header
+        this.findHeader(chatkitElement, 10).then(header => {
+          // Only inject if we don't already have controls
+          if (header && !this.elements.controls) {
+            this.injectIntoHeader(header);
+          } else if (!this.elements.controls) {
+            // Fallback to overlay if header not found and no controls exist
+            this.createOverlayResizeControls(chatkitElement);
+          }
+        }).catch(() => {
+          // Fallback to overlay on error if no controls exist
+          if (!this.elements.controls) {
+            this.createOverlayResizeControls(chatkitElement);
+          }
+        });
+      } else {
+        // Header disabled or mobile - use overlay (if controls don't exist)
+        if (!this.elements.controls) {
+          this.createOverlayResizeControls(chatkitElement);
+        }
+      }
+    }
+    
+    findHeader(chatkitElement, maxAttempts = 10) {
+      return new Promise((resolve) => {
+        let attempts = 0;
+        
+        const tryFind = () => {
+          attempts++;
+          let header = null;
+          
+          // Try Shadow DOM first
+          if (chatkitElement.shadowRoot) {
+            header = chatkitElement.shadowRoot.querySelector('header') ||
+                    chatkitElement.shadowRoot.querySelector('[role="banner"]');
+          }
+          
+          // Try regular DOM
+          if (!header) {
+            header = chatkitElement.querySelector('header') ||
+                    chatkitElement.querySelector('[role="banner"]');
+          }
+          
+          // Try finding by class or data attribute
+          if (!header) {
+            const allElements = chatkitElement.shadowRoot 
+              ? Array.from(chatkitElement.shadowRoot.querySelectorAll('*'))
+              : Array.from(chatkitElement.querySelectorAll('*'));
+            header = allElements.find(el => 
+              el.tagName === 'HEADER' || 
+              el.getAttribute('role') === 'banner' ||
+              el.classList.contains('header') ||
+              el.classList.contains('chatkit-header')
+            );
+          }
+          
+          if (header) {
+            this.elements.header = header;
+            resolve(header);
+          } else if (attempts < maxAttempts) {
+            setTimeout(tryFind, 200);
+          } else {
+            resolve(null);
+          }
+        };
+        
+        // Start trying after a short delay to allow ChatKit to render
+        setTimeout(tryFind, 300);
+      });
+    }
+    
+    createButtonElements() {
       const sizes = [
         { 
           key: 'small', 
@@ -199,6 +265,7 @@
         }
       ];
       
+      const buttons = [];
       sizes.forEach(size => {
         const btn = document.createElement('button');
         btn.className = 'chatkit-resize-btn';
@@ -214,16 +281,84 @@
           this.handlePresetSize(size.key);
         });
         
-        controls.appendChild(btn);
+        buttons.push(btn);
       });
+      
+      return buttons;
+    }
+    
+    injectIntoHeader(header) {
+      // Check if controls already exist
+      const existing = header.querySelector('.chatkit-resize-controls');
+      if (existing) {
+        this.elements.controls = existing;
+        this.state.controlsLocation = 'header';
+        this.updateResizeButtons();
+        return;
+      }
+      
+      // Create resize controls container
+      const controls = document.createElement('div');
+      controls.className = 'chatkit-resize-controls';
+      controls.setAttribute('role', 'toolbar');
+      controls.setAttribute('aria-label', 'Window size controls');
+      
+      // Create buttons
+      const buttons = this.createButtonElements();
+      buttons.forEach(btn => controls.appendChild(btn));
+      
+      // Insert controls into header (prefer right-side placement)
+      const rightAction = header.querySelector('[data-right-action]') || 
+                         header.querySelector('.right-action') ||
+                         header.querySelector('[data-action="right"]') ||
+                         header.querySelector('div:last-child');
+      
+      if (rightAction && rightAction.parentNode === header) {
+        header.insertBefore(controls, rightAction);
+      } else {
+        header.appendChild(controls);
+      }
+      
+      this.elements.controls = controls;
+      this.state.controlsLocation = 'header';
+      
+      // Update button states
+      this.updateResizeButtons();
+    }
+    
+    createOverlayResizeControls(chatkitElement) {
+      // Check if overlay already exists
+      let overlay = document.querySelector('.chatkit-resize-controls-overlay');
+      if (overlay) {
+        this.elements.overlay = overlay;
+        this.elements.controls = overlay.querySelector('.chatkit-resize-controls');
+        this.updateControlPosition();
+        this.updateResizeButtons();
+        return;
+      }
+      
+      // Create overlay container
+      overlay = document.createElement('div');
+      overlay.className = 'chatkit-resize-controls-overlay';
+      
+      // Create resize controls container
+      const controls = document.createElement('div');
+      controls.className = 'chatkit-resize-controls';
+      controls.setAttribute('role', 'toolbar');
+      controls.setAttribute('aria-label', 'Window size controls');
+      
+      // Create buttons using shared method
+      const buttons = this.createButtonElements();
+      buttons.forEach(btn => controls.appendChild(btn));
       
       overlay.appendChild(controls);
       document.body.appendChild(overlay);
       
       this.elements.overlay = overlay;
       this.elements.controls = controls;
+      this.state.controlsLocation = 'overlay';
       
-      // Setup position updates
+      // Setup position updates (only needed for overlay)
       this.setupPositionUpdates();
       
       // Initial positioning
@@ -234,6 +369,12 @@
     }
     
     setupPositionUpdates() {
+      // Only set up position updates for overlay controls
+      // Header-embedded controls don't need position tracking
+      if (this.state.controlsLocation !== 'overlay') {
+        return;
+      }
+      
       const chatkit = this.elements.chatkit;
       if (!chatkit) return;
       
@@ -281,6 +422,17 @@
     }
     
     updateControlPosition() {
+      // Skip positioning if controls are in header (header handles positioning naturally)
+      if (this.state.controlsLocation === 'header') {
+        // Only need to handle visibility for header-embedded controls
+        if (this.elements.controls && this.elements.chatkit) {
+          const isVisible = this.state.isOpen && this.elements.chatkit.style.display !== 'none';
+          this.elements.controls.style.display = isVisible ? 'flex' : 'none';
+        }
+        return;
+      }
+      
+      // Overlay positioning logic
       const overlay = this.elements.overlay;
       const chatkit = this.elements.chatkit;
       
@@ -439,10 +591,23 @@
       });
       this.observers = [];
       
-      // Remove overlay
+      // Remove controls from header if embedded
+      if (this.state.controlsLocation === 'header' && this.elements.controls) {
+        if (this.elements.controls.parentNode) {
+          this.elements.controls.remove();
+        }
+        this.elements.header = null;
+      }
+      
+      // Remove overlay if exists
       if (this.elements.overlay && this.elements.overlay.parentNode) {
         this.elements.overlay.remove();
       }
+      
+      // Reset state
+      this.state.controlsLocation = null;
+      this.elements.controls = null;
+      this.elements.overlay = null;
     }
   }
 
@@ -656,7 +821,7 @@
 
     // Initialize ChatWindowManager
     chatWindowManager = new ChatWindowManager(config);
-    
+
     const originalText = button.textContent || config.buttonText || 'Chat now';
     const closeText = config.closeText || '✕';
     const accentColor = config.accentColor || '#FF4500';
