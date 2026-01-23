@@ -77,12 +77,13 @@
 /* Ensure header stays on top and contains controls properly */
 #myChatkit openai-chatkit header,
 #myChatkit openai-chatkit [role="banner"] {
-  position: relative;
-  z-index: 10; /* Ensure header is above content */
-  overflow: visible; /* Allow controls to be fully visible */
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap; /* Prevent wrapping that could cause overlap */
+  position: relative !important;
+  z-index: 10 !important; /* Ensure header is above content */
+  overflow: visible !important; /* Allow controls to be fully visible */
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important; /* Prevent wrapping that could cause overlap */
+  min-height: 40px; /* Ensure minimum height for proper spacing */
 }
 
 /* Ensure chat content respects header boundaries */
@@ -445,42 +446,48 @@ body[data-chatkit-shadow="bold"] #myChatkit {
 
 /* Resize control buttons in header */
 .chatkit-resize-controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
-  padding: 0 4px;
-  position: relative;
-  flex-shrink: 0; /* Prevent controls from shrinking */
-  z-index: 1; /* Ensure controls are above header content but below overlays */
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  margin-left: auto !important;
+  padding: 0 4px !important;
+  position: relative !important;
+  flex-shrink: 0 !important; /* Prevent controls from shrinking */
+  z-index: 1 !important; /* Ensure controls are above header content but below overlays */
+  line-height: 1 !important; /* Reset line-height to prevent baseline alignment issues */
+  vertical-align: middle; /* Fallback for non-flex scenarios */
 }
 
 /* Ensure header properly contains resize controls */
 header .chatkit-resize-controls,
 [role="banner"] .chatkit-resize-controls {
-  position: relative;
-  z-index: 10; /* Higher z-index within header context */
-  max-width: fit-content; /* Only take up needed space */
-  overflow: visible; /* Allow hover states to be visible */
-  white-space: nowrap; /* Prevent wrapping */
+  position: relative !important;
+  z-index: 10 !important; /* Higher z-index within header context */
+  max-width: fit-content !important; /* Only take up needed space */
+  overflow: visible !important; /* Allow hover states to be visible */
+  white-space: nowrap !important; /* Prevent wrapping */
+  align-self: center !important; /* Explicitly center vertically within header */
+  line-height: 1 !important; /* Reset line-height to prevent baseline issues */
 }
 
 /* Prevent controls from floating outside header boundaries */
 #myChatkit openai-chatkit header .chatkit-resize-controls,
 #myChatkit openai-chatkit [role="banner"] .chatkit-resize-controls {
-  position: static; /* Use normal flow within header */
-  flex-shrink: 0; /* Don't shrink */
-  align-self: center; /* Vertically center in header */
+  position: static !important; /* Use normal flow within header */
+  flex-shrink: 0 !important; /* Don't shrink */
+  align-self: center !important; /* Vertically center in header */
+  line-height: 1 !important; /* Reset line-height to prevent baseline issues */
 }
 
 /* Add subtle separator before controls when in header */
 .chatkit-resize-controls::before {
   content: '';
   width: 1px;
-  height: 20px;
+  height: 28px; /* Match button height for proper alignment */
   background: rgba(0, 0, 0, 0.1);
   margin-right: 4px;
   display: none; /* Only show if there's content before */
+  align-self: center; /* Vertically center separator within flex container */
 }
 
 header .chatkit-resize-controls::before,
@@ -509,12 +516,14 @@ header .chatkit-resize-controls::before,
 /* Smaller buttons when in header for better fit */
 header .chatkit-resize-btn,
 [role="banner"] .chatkit-resize-btn {
-  width: 28px;
-  height: 28px;
-  margin: 0 2px;
-  position: relative;
-  z-index: 1;
-  flex-shrink: 0; /* Prevent button shrinking */
+  width: 28px !important;
+  height: 28px !important;
+  margin: 0 2px !important;
+  position: relative !important;
+  z-index: 1 !important;
+  flex-shrink: 0 !important; /* Prevent button shrinking */
+  line-height: 1 !important; /* Reset line-height for consistent vertical centering */
+  vertical-align: middle; /* Fallback for non-flex scenarios */
 }
 
 .chatkit-resize-btn:hover {
@@ -544,18 +553,23 @@ header .chatkit-resize-btn,
 }
 
 .chatkit-resize-btn .chatkit-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  line-height: 1;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 14px !important;
+  height: 14px !important;
+  line-height: 1 !important;
+  margin: 0; /* Remove any default margins */
+  padding: 0; /* Remove any default padding */
 }
 
 .chatkit-resize-btn .chatkit-icon svg {
-  width: 100%;
-  height: 100%;
-  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  vertical-align: middle; /* Fallback alignment */
+  margin: 0; /* Remove any default margins */
+  padding: 0; /* Remove any default padding */
 }
 
 /* Overlay controls (fallback when header not accessible) */

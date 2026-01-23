@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name: OpenAI ChatKit for WordPress
- * Plugin URI: https://github.com/francescogruner/openai-chatkit-wordpress
+ * Plugin URI: https://github.com/Peepul-Tree-Products/OpenAI-ChatKit-mcl
  * Description: Integrate OpenAI's ChatKit into your WordPress site with guided setup. Supports customizable text in any language.
- * Version: 1.0.3
- * Author: Francesco Grüner
- * Author URI: https://francescogruner.it
+ * Version: 1.0b
+ * Author: Rakesh Kamath
+ * Author URI: https://github.com/Peepul-Tree-Products/OpenAI-ChatKit-mcl
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: chatkit-wp
@@ -15,7 +15,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('CHATKIT_WP_VERSION', '1.0.3');
+define('CHATKIT_WP_VERSION', '1.0b');
 define('CHATKIT_WP_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('CHATKIT_WP_PLUGIN_URL', plugin_dir_url(__FILE__));
 
