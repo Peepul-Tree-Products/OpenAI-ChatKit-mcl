@@ -1,5 +1,5 @@
 <div class="wrap">
-    <h1><?php esc_html_e('ChatKit Settings', 'chatkit-wp'); ?></h1>
+    <h1><?php esc_html_e('MCL Newcomer ChatKit Settings', 'chatkit-wp'); ?></h1>
 
     <div style="background: #fff; padding: 20px; margin: 20px 0; border-left: 4px solid #2271b1;">
         <h3>📖 <?php esc_html_e('How to use this plugin', 'chatkit-wp'); ?></h3>

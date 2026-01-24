@@ -43,6 +43,9 @@
         console.warn('ChatKit elements not found');
         return;
       }
+      // Store original button text for restore on minimize/close
+      this.originalButtonText = this.elements.button.textContent || this.config.buttonText || 'Chat now';
+      this.accentColor = this.config.accentColor || '#FF4500';
       this.loadSavedPreferences();
       this.createControls();
     }
@@ -158,39 +161,21 @@
         return;
       }
       
-      // Helper to convert WordPress boolean strings to actual booleans
-      const toBool = (value) => {
-        if (typeof value === 'boolean') return value;
-        if (typeof value === 'string') return value === '1' || value.toLowerCase() === 'true';
-        if (typeof value === 'number') return value === 1;
-        return !!value;
-      };
-      
-      // Try header injection first if header is enabled
-      const headerEnabled = toBool(this.config.showHeader);
-      
-      if (headerEnabled && window.innerWidth > 768) {
-        // Try to find and inject into header
-        this.findHeader(chatkitElement, 10).then(header => {
-          // Only inject if we don't already have controls
-          if (header && !this.elements.controls) {
-            this.injectIntoHeader(header);
-          } else if (!this.elements.controls) {
-            // Fallback to overlay if header not found and no controls exist
-            this.createOverlayResizeControls(chatkitElement);
-          }
-        }).catch(() => {
-          // Fallback to overlay on error if no controls exist
-          if (!this.elements.controls) {
-            this.createOverlayResizeControls(chatkitElement);
-          }
-        });
-      } else {
-        // Header disabled or mobile - use overlay (if controls don't exist)
+      // Always try header injection first (preferred approach)
+      // Only use overlay as emergency fallback if header truly not available
+      this.findHeader(chatkitElement, 10).then(header => {
+        if (header && !this.elements.controls) {
+          this.injectIntoHeader(header);
+        } else if (!this.elements.controls) {
+          // Emergency fallback: overlay only if header not found after retries
+          this.createOverlayResizeControls(chatkitElement);
+        }
+      }).catch(() => {
+        // Emergency fallback: overlay on error
         if (!this.elements.controls) {
           this.createOverlayResizeControls(chatkitElement);
         }
-      }
+      });
     }
     
     findHeader(chatkitElement, maxAttempts = 10) {
@@ -249,11 +234,6 @@
           icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="10" height="10" rx="1.5"/></svg>' 
         },
         { 
-          key: 'medium', 
-          label: 'Medium window', 
-          icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="11" height="11" rx="1.5"/><rect x="3.5" y="3.5" width="7" height="7" rx="0.5"/></svg>' 
-        },
-        { 
           key: 'large', 
           label: 'Large window', 
           icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="12" height="12" rx="1.5"/><rect x="2.5" y="2.5" width="9" height="9" rx="0.5"/><rect x="4" y="4" width="6" height="6" rx="0.5"/></svg>' 
@@ -262,6 +242,11 @@
           key: 'maximize', 
           label: 'Maximize window', 
           icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5h10v7H2z"/><path d="M5 2h7v7"/></svg>' 
+        },
+        { 
+          key: 'minimize', 
+          label: 'Minimize window', 
+          icon: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h10"/></svg>' 
         }
       ];
       
@@ -278,7 +263,11 @@
         btn.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          this.handlePresetSize(size.key);
+          if (size.key === 'minimize') {
+            this.close();
+          } else {
+            this.handlePresetSize(size.key);
+          }
         });
         
         buttons.push(btn);
@@ -422,17 +411,16 @@
     }
     
     updateControlPosition() {
-      // Skip positioning if controls are in header (header handles positioning naturally)
+      // Header-embedded controls: only handle visibility (CSS Grid handles positioning)
       if (this.state.controlsLocation === 'header') {
-        // Only need to handle visibility for header-embedded controls
         if (this.elements.controls && this.elements.chatkit) {
           const isVisible = this.state.isOpen && this.elements.chatkit.style.display !== 'none';
-          this.elements.controls.style.display = isVisible ? 'flex' : 'none';
+          this.elements.controls.style.display = isVisible ? 'inline-flex' : 'none';
         }
         return;
       }
       
-      // Overlay positioning logic
+      // Overlay positioning logic (emergency fallback only)
       const overlay = this.elements.overlay;
       const chatkit = this.elements.chatkit;
       
@@ -449,11 +437,9 @@
       
       const rect = chatkit.getBoundingClientRect();
       const isMaximized = this.state.size === 'maximized';
-      // Reduced padding for tighter integration with window edge (like native window controls)
-      const controlPadding = 6; // Close to edge for native feel
+      const controlPadding = 6;
       
       if (isMaximized) {
-        // Maximized: Position at top-right of viewport, close to edge
         overlay.style.cssText = `
           position: fixed;
           top: ${controlPadding}px;
@@ -462,8 +448,6 @@
           pointer-events: none;
         `;
       } else {
-        // Regular size: Position at top-right of chat window, aligned to window edge
-        // Match the window's border radius for visual cohesion
         const topOffset = rect.top + controlPadding;
         const rightOffset = window.innerWidth - rect.right + controlPadding;
         overlay.style.cssText = `
@@ -578,7 +562,13 @@
       }
       if (this.elements.button) {
         this.elements.button.setAttribute('aria-expanded', 'false');
+        // Restore button to default state (original text, remove open class, restore color)
+        this.elements.button.classList.remove('chatkit-open');
+        this.elements.button.textContent = this.originalButtonText;
+        this.elements.button.style.backgroundColor = this.accentColor;
+        this.elements.button.focus();
       }
+      document.body.style.overflow = '';
       this.updateControlPosition();
     }
     

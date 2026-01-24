@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: OpenAI ChatKit for WordPress
+ * Plugin Name: MCL Newcomer ChatKit
  * Plugin URI: https://github.com/Peepul-Tree-Products/OpenAI-ChatKit-mcl
  * Description: Integrate OpenAI's ChatKit into your WordPress site with guided setup. Supports customizable text in any language.
  * Version: 1.0b
@@ -61,8 +61,8 @@ class ChatKit_WordPress {
 
     public function add_admin_menu() {
         add_options_page(
-            __('ChatKit Settings', 'chatkit-wp'),
-            __('ChatKit', 'chatkit-wp'),
+            __('MCL Newcomer ChatKit Settings', 'chatkit-wp'),
+            __('MCL Newcomer ChatKit', 'chatkit-wp'),
             'manage_options',
             'chatkit-settings',
             [$this, 'render_settings_page']

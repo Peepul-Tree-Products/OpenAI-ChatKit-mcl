@@ -7,7 +7,8 @@ set -e
 
 PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_NAME="openai-chatkit-wordpress"
-ZIP_NAME="${PLUGIN_NAME}.zip"
+TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+ZIP_NAME="${PLUGIN_NAME}-${TIMESTAMP}.zip"
 TEMP_DIR=$(mktemp -d)
 
 echo "📦 Packaging plugin for deployment..."
